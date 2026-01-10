@@ -62,19 +62,50 @@ char * copy_string(const char * s);
 aoonet_server * aoonet_server_new(int port, int32_t *err) {
     int val = 0;
 
-    // make 'any' address
-    sockaddr_in sa;
-    memset(&sa, 0, sizeof(sa));
-    sa.sin_family = AF_INET;
-    sa.sin_addr.s_addr = INADDR_ANY;
-    sa.sin_port = htons(port);
+    // Try IPv6 dual-stack first, fall back to IPv4
+    bool use_ipv6 = true;
 
-    // create and bind UDP socket
-    int udpsocket = socket(AF_INET, SOCK_DGRAM, 0);
+    // make 'any' address for IPv6 dual-stack
+    sockaddr_in6 sa6;
+    memset(&sa6, 0, sizeof(sa6));
+    sa6.sin6_family = AF_INET6;
+    sa6.sin6_addr = in6addr_any;
+    sa6.sin6_port = htons(port);
+
+    // IPv4 fallback address
+    sockaddr_in sa4;
+    memset(&sa4, 0, sizeof(sa4));
+    sa4.sin_family = AF_INET;
+    sa4.sin_addr.s_addr = INADDR_ANY;
+    sa4.sin_port = htons(port);
+
+    // create UDP socket - try IPv6 first
+    int udpsocket = socket(AF_INET6, SOCK_DGRAM, 0);
     if (udpsocket < 0){
-        *err = aoo::net::socket_errno();
-        LOG_ERROR("aoo_server: couldn't create UDP socket (" << *err << ")");
-        return nullptr;
+        // Fall back to IPv4
+        use_ipv6 = false;
+        udpsocket = socket(AF_INET, SOCK_DGRAM, 0);
+        if (udpsocket < 0){
+            *err = aoo::net::socket_errno();
+            LOG_ERROR("aoo_server: couldn't create UDP socket (" << *err << ")");
+            return nullptr;
+        }
+    }
+
+    if (use_ipv6) {
+        // Enable dual-stack (accept both IPv4 and IPv6)
+        val = 0;
+        if (setsockopt(udpsocket, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&val, sizeof(val)) < 0){
+            LOG_WARNING("aoo_server: couldn't disable IPV6_V6ONLY for UDP, falling back to IPv4");
+            aoo::net::socket_close(udpsocket);
+            use_ipv6 = false;
+            udpsocket = socket(AF_INET, SOCK_DGRAM, 0);
+            if (udpsocket < 0){
+                *err = aoo::net::socket_errno();
+                LOG_ERROR("aoo_server: couldn't create UDP socket (" << *err << ")");
+                return nullptr;
+            }
+        }
     }
 
     // set non-blocking
@@ -89,20 +120,38 @@ aoonet_server * aoonet_server_new(int port, int32_t *err) {
     }
 #endif
 
-    if (bind(udpsocket, (sockaddr *)&sa, sizeof(sa)) < 0){
-        *err = aoo::net::socket_errno();
-        LOG_ERROR("aoo_server: couldn't bind UDP socket (" << *err << ")");
-        aoo::net::socket_close(udpsocket);
-        return nullptr;
+    if (use_ipv6) {
+        if (bind(udpsocket, (sockaddr *)&sa6, sizeof(sa6)) < 0){
+            *err = aoo::net::socket_errno();
+            LOG_ERROR("aoo_server: couldn't bind UDP socket to IPv6 (" << *err << ")");
+            aoo::net::socket_close(udpsocket);
+            return nullptr;
+        }
+    } else {
+        if (bind(udpsocket, (sockaddr *)&sa4, sizeof(sa4)) < 0){
+            *err = aoo::net::socket_errno();
+            LOG_ERROR("aoo_server: couldn't bind UDP socket (" << *err << ")");
+            aoo::net::socket_close(udpsocket);
+            return nullptr;
+        }
     }
 
     // create TCP socket
-    int tcpsocket = socket(AF_INET, SOCK_STREAM, 0);
+    int tcpsocket = use_ipv6 ? socket(AF_INET6, SOCK_STREAM, 0) : socket(AF_INET, SOCK_STREAM, 0);
     if (tcpsocket < 0){
         *err = aoo::net::socket_errno();
         LOG_ERROR("aoo_server: couldn't create TCP socket (" << *err << ")");
         aoo::net::socket_close(udpsocket);
         return nullptr;
+    }
+
+    if (use_ipv6) {
+        // Enable dual-stack for TCP
+        val = 0;
+        if (setsockopt(tcpsocket, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&val, sizeof(val)) < 0){
+            LOG_WARNING("aoo_server: couldn't disable IPV6_V6ONLY for TCP");
+            // continue anyway
+        }
     }
 
     // set SO_REUSEADDR
@@ -138,12 +187,22 @@ aoonet_server * aoonet_server_new(int port, int32_t *err) {
 #endif
 
     // bind TCP socket
-    if (bind(tcpsocket, (sockaddr *)&sa, sizeof(sa)) < 0){
-        *err = aoo::net::socket_errno();
-        LOG_ERROR("aoo_server: couldn't bind TCP socket (" << *err << ")");
-        aoo::net::socket_close(tcpsocket);
-        aoo::net::socket_close(udpsocket);
-        return nullptr;
+    if (use_ipv6) {
+        if (bind(tcpsocket, (sockaddr *)&sa6, sizeof(sa6)) < 0){
+            *err = aoo::net::socket_errno();
+            LOG_ERROR("aoo_server: couldn't bind TCP socket to IPv6 (" << *err << ")");
+            aoo::net::socket_close(tcpsocket);
+            aoo::net::socket_close(udpsocket);
+            return nullptr;
+        }
+    } else {
+        if (bind(tcpsocket, (sockaddr *)&sa4, sizeof(sa4)) < 0){
+            *err = aoo::net::socket_errno();
+            LOG_ERROR("aoo_server: couldn't bind TCP socket (" << *err << ")");
+            aoo::net::socket_close(tcpsocket);
+            aoo::net::socket_close(udpsocket);
+            return nullptr;
+        }
     }
 
     // listen
@@ -154,6 +213,8 @@ aoonet_server * aoonet_server_new(int port, int32_t *err) {
         aoo::net::socket_close(udpsocket);
         return nullptr;
     }
+
+    LOG_VERBOSE("aoo_server: started with " << (use_ipv6 ? "IPv6 dual-stack" : "IPv4"));
 
     return new aoo::net::server(tcpsocket, udpsocket);
 }

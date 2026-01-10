@@ -148,26 +148,70 @@ namespace SocketHelpers
         if (handle == invalidSocket || ! isValidPortNumber (port))
             return false;
 
-        struct sockaddr_in addr;
-        zerostruct (addr); // (can't use "= { 0 }" on this object because it's typedef'ed as a C struct)
+        // Check if socket is IPv6
+        int optval;
+        socklen_t optlen = sizeof(optval);
+        bool isIPv6 = (getsockopt (handle, IPPROTO_IPV6, IPV6_V6ONLY, (char*) &optval, &optlen) == 0);
 
-        addr.sin_family = PF_INET;
-        addr.sin_port = htons ((uint16) port);
-        addr.sin_addr.s_addr = address.isNotEmpty() ? ::inet_addr (address.toRawUTF8())
-                                                    : htonl (INADDR_ANY);
+        if (isIPv6)
+        {
+            struct sockaddr_in6 addr6;
+            zerostruct (addr6);
+            addr6.sin6_family = AF_INET6;
+            addr6.sin6_port = htons ((uint16) port);
 
-        return ::bind (handle, (struct sockaddr*) &addr, sizeof (addr)) >= 0;
+            if (address.isNotEmpty())
+            {
+                // Try to parse as IPv6 or IPv4-mapped
+                if (inet_pton (AF_INET6, address.toRawUTF8(), &addr6.sin6_addr) != 1)
+                {
+                    // Try as IPv4 address, convert to IPv4-mapped IPv6
+                    struct in_addr v4addr;
+                    if (inet_pton (AF_INET, address.toRawUTF8(), &v4addr) == 1)
+                    {
+                        // Create IPv4-mapped IPv6 address ::ffff:x.x.x.x
+                        memset (&addr6.sin6_addr, 0, 10);
+                        addr6.sin6_addr.s6_addr[10] = 0xff;
+                        addr6.sin6_addr.s6_addr[11] = 0xff;
+                        memcpy (&addr6.sin6_addr.s6_addr[12], &v4addr, 4);
+                    }
+                }
+            }
+            else
+            {
+                addr6.sin6_addr = in6addr_any;
+            }
+
+            return ::bind (handle, (struct sockaddr*) &addr6, sizeof (addr6)) >= 0;
+        }
+        else
+        {
+            struct sockaddr_in addr;
+            zerostruct (addr);
+
+            addr.sin_family = PF_INET;
+            addr.sin_port = htons ((uint16) port);
+            addr.sin_addr.s_addr = address.isNotEmpty() ? ::inet_addr (address.toRawUTF8())
+                                                        : htonl (INADDR_ANY);
+
+            return ::bind (handle, (struct sockaddr*) &addr, sizeof (addr)) >= 0;
+        }
     }
 
     static int getBoundPort (SocketHandle handle) noexcept
     {
         if (handle != invalidSocket)
         {
-            struct sockaddr_in addr;
+            struct sockaddr_storage addr;
             socklen_t len = sizeof (addr);
 
             if (getsockname (handle, (struct sockaddr*) &addr, &len) == 0)
-                return ntohs (addr.sin_port);
+            {
+                if (addr.ss_family == AF_INET6)
+                    return ntohs (((struct sockaddr_in6*) &addr)->sin6_port);
+                else
+                    return ntohs (((struct sockaddr_in*) &addr)->sin_port);
+            }
         }
 
         return -1;
@@ -244,13 +288,25 @@ namespace SocketHelpers
                     }
                     else
                     {
-                        sockaddr_in client;
-                        socklen_t clientLen = sizeof (sockaddr);
+                        sockaddr_storage client;
+                        socklen_t clientLen = sizeof (client);
 
                         bytesThisTime = ::recvfrom (handle, buffer, numToRead, 0, (sockaddr*) &client, &clientLen);
 
-                        *senderIP = String::fromUTF8 (inet_ntoa (client.sin_addr), 16);
-                        *senderPort = ntohs (client.sin_port);
+                        if (client.ss_family == AF_INET6)
+                        {
+                            char addrBuf[INET6_ADDRSTRLEN];
+                            auto* addr6 = (sockaddr_in6*) &client;
+                            inet_ntop (AF_INET6, &addr6->sin6_addr, addrBuf, sizeof (addrBuf));
+                            *senderIP = String::fromUTF8 (addrBuf);
+                            *senderPort = ntohs (addr6->sin6_port);
+                        }
+                        else
+                        {
+                            auto* addr4 = (sockaddr_in*) &client;
+                            *senderIP = String::fromUTF8 (inet_ntoa (addr4->sin_addr), 16);
+                            *senderPort = ntohs (addr4->sin_port);
+                        }
                     }
                 }
             }
@@ -649,7 +705,30 @@ DatagramSocket::DatagramSocket (bool canBroadcast)
 {
     SocketHelpers::initSockets();
 
-    handle = (int) socket (AF_INET, SOCK_DGRAM, 0);
+    // Try IPv6 dual-stack socket first
+    handle = (int) socket (AF_INET6, SOCK_DGRAM, 0);
+
+    if (handle >= 0)
+    {
+        // Enable dual-stack (accept both IPv4 and IPv6)
+        int v6only = 0;
+        if (setsockopt ((SocketHandle) handle.load(), IPPROTO_IPV6, IPV6_V6ONLY,
+                        (const char*) &v6only, sizeof (v6only)) < 0)
+        {
+            // Dual-stack not supported, fall back to IPv4
+           #if JUCE_WINDOWS
+            closesocket ((SocketHandle) handle.load());
+           #else
+            ::close ((SocketHandle) handle.load());
+           #endif
+            handle = (int) socket (AF_INET, SOCK_DGRAM, 0);
+        }
+    }
+    else
+    {
+        // IPv6 not available, try IPv4
+        handle = (int) socket (AF_INET, SOCK_DGRAM, 0);
+    }
 
     if (handle >= 0)
     {
