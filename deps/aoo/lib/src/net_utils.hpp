@@ -6,6 +6,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 typedef int socklen_t;
+using socket_type = SOCKET;
 #else
 #include <sys/socket.h>
 #include <sys/select.h>
@@ -19,6 +20,7 @@ typedef int socklen_t;
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <errno.h>
+using socket_type = int;
 #endif
 
 #include <cstring>
@@ -186,15 +188,15 @@ struct ip_address {
     socklen_t length;
 };
 
-void socket_close(int sock);
+void socket_close(socket_type sock);
 
 std::string socket_strerror(int err);
 
 int socket_errno();
 
-int socket_set_nonblocking(int socket, int nonblocking);
+int socket_set_nonblocking(socket_type socket, int nonblocking);
 
-int socket_connect(int socket, const ip_address& addr, float timeout);
+int socket_connect(socket_type socket, const ip_address& addr, float timeout);
 
 } // net
 } // aoo

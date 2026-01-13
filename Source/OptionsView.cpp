@@ -294,6 +294,17 @@ OptionsView::OptionsView(SonobusAudioProcessor& proc, std::function<AudioDeviceM
 
     configEditor(mOptionsUdpPortEditor.get());
 
+    mOptionsIPStackChoice = std::make_unique<SonoChoiceButton>();
+    mOptionsIPStackChoice->setTitle(TRANS("IP Stack Preference"));
+    mOptionsIPStackChoice->addChoiceListener(this);
+    mOptionsIPStackChoice->addItem(TRANS("System Default"), IPStackDefault);
+    mOptionsIPStackChoice->addItem(TRANS("Prefer IPv4"), IPStackPreferIPv4);
+    mOptionsIPStackChoice->addItem(TRANS("Prefer IPv6"), IPStackPreferIPv6);
+    mOptionsIPStackChoice->setTooltip(TRANS("Choose which IP protocol to prefer when connecting to servers. System Default uses your system's preference (usually IPv6 first if available). Use Prefer IPv4 or Prefer IPv6 to force a specific protocol when both are available."));
+
+    mOptionsIPStackLabel = std::make_unique<Label>("", TRANS("IP Stack:"));
+    configLabel(mOptionsIPStackLabel.get(), false);
+    mOptionsIPStackLabel->setJustificationType(Justification::centredRight);
 
     mOptionsDefaultLevelSlider     = std::make_unique<Slider>(Slider::LinearHorizontal,  Slider::TextBoxAbove);
     mOptionsDefaultLevelSlider->setName("uservol");
@@ -368,6 +379,8 @@ OptionsView::OptionsView(SonobusAudioProcessor& proc, std::function<AudioDeviceM
     //mOptionsComponent->addAndMakeVisible(mOptionsHearLatencyButton.get());
     mOptionsComponent->addAndMakeVisible(mOptionsUdpPortEditor.get());
     mOptionsComponent->addAndMakeVisible(mOptionsUseSpecificUdpPortButton.get());
+    mOptionsComponent->addAndMakeVisible(mOptionsIPStackChoice.get());
+    mOptionsComponent->addAndMakeVisible(mOptionsIPStackLabel.get());
     mOptionsComponent->addAndMakeVisible(mOptionsDynamicResamplingButton.get());
     mOptionsComponent->addAndMakeVisible(mOptionsAutoReconnectButton.get());
     mOptionsComponent->addAndMakeVisible(mOptionsInputLimiterButton.get());
@@ -618,6 +631,7 @@ void OptionsView::updateState(bool ignorecheck)
         }
     }
 
+    mOptionsIPStackChoice->setSelectedId((int)processor.getIPStackPreference(), dontSendNotification);
 
     if (JUCEApplication::isStandaloneApp()) {
         if (getShouldOverrideSampleRateValue) {
@@ -755,6 +769,11 @@ void OptionsView::updateLayout()
     optionsUdpBox.items.add(FlexItem(minButtonWidth, minitemheight, *mOptionsUseSpecificUdpPortButton).withMargin(0).withFlex(1));
     optionsUdpBox.items.add(FlexItem(90, minitemheight, *mOptionsUdpPortEditor).withMargin(0).withFlex(0));
 
+    optionsIPStackBox.items.clear();
+    optionsIPStackBox.flexDirection = FlexBox::Direction::row;
+    optionsIPStackBox.items.add(FlexItem(80, minitemheight, *mOptionsIPStackLabel).withMargin(0).withFlex(0));
+    optionsIPStackBox.items.add(FlexItem(minButtonWidth, minitemheight, *mOptionsIPStackChoice).withMargin(0).withFlex(1));
+
     optionsDynResampleBox.items.clear();
     optionsDynResampleBox.flexDirection = FlexBox::Direction::row;
     optionsDynResampleBox.items.add(FlexItem(10, 12).withFlex(0));
@@ -832,6 +851,7 @@ void OptionsView::updateLayout()
     optionsBox.items.add(FlexItem(100, minpassheight, optionsSnapToMouseBox).withMargin(2).withFlex(0));
     optionsBox.items.add(FlexItem(100, minpassheight, optionsAutoReconnectBox).withMargin(2).withFlex(0));
     optionsBox.items.add(FlexItem(100, minitemheight, optionsUdpBox).withMargin(2).withFlex(0));
+    optionsBox.items.add(FlexItem(100, minitemheight, optionsIPStackBox).withMargin(2).withFlex(0));
     if (JUCEApplicationBase::isStandaloneApp()) {
         optionsBox.items.add(FlexItem(100, minpassheight, optionsOverrideSamplerateBox).withMargin(2).withFlex(0));
         if (mOptionsAllowBluetoothInput) {
@@ -1231,6 +1251,9 @@ void OptionsView::choiceButtonSelected(SonoChoiceButton *comp, int index, int id
     }
     else if (comp == mRecBitsChoice.get()) {
         processor.setDefaultRecordingBitsPerSample(ident);
+    }
+    else if (comp == mOptionsIPStackChoice.get()) {
+        processor.setIPStackPreference((IPStackPreference)ident);
     }
     else if (comp == mOptionsLanguageChoice.get()) {
         String code = codes[ident];

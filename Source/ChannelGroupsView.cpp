@@ -1027,21 +1027,21 @@ void ChannelGroupsView::configLevelSlider(Slider * slider, bool monmode)
     slider->setSliderSnapsToMousePosition(processor.getSlidersSnapToMousePosition());
     slider->setScrollWheelEnabled(false);
     slider->setWantsKeyboardFocus(true);
-    slider->valueFromTextFunction = [](const String& s) -> float { return Decibels::decibelsToGain(s.getFloatValue()); };
+    slider->valueFromTextFunction = [](const String& s) -> double { return Decibels::decibelsToGain(s.getFloatValue()); };
 
     if (mPeerMode) {
         if (monmode) {
-            slider->textFromValueFunction = [](float v) -> String { return String(TRANS("Level: ")) + Decibels::toString(Decibels::gainToDecibels(v), 1); };
+            slider->textFromValueFunction = [](double v) -> String { return String(TRANS("Level: ")) + Decibels::toString(Decibels::gainToDecibels((float)v), 1); };
         }
         else {
-            slider->textFromValueFunction = [](float v) -> String { return String(TRANS("Level: ")) + Decibels::toString(Decibels::gainToDecibels(v), 1); };
+            slider->textFromValueFunction = [](double v) -> String { return String(TRANS("Level: ")) + Decibels::toString(Decibels::gainToDecibels((float)v), 1); };
         }
     } else {
         if (monmode) {
-            slider->textFromValueFunction = [](float v) -> String { return String(TRANS("Monitor: ")) + Decibels::toString(Decibels::gainToDecibels(v), 1); };
+            slider->textFromValueFunction = [](double v) -> String { return String(TRANS("Monitor: ")) + Decibels::toString(Decibels::gainToDecibels((float)v), 1); };
         }
         else {
-            slider->textFromValueFunction = [](float v) -> String { return String(TRANS("Pre Level: ")) + Decibels::toString(Decibels::gainToDecibels(v), 1); };
+            slider->textFromValueFunction = [](double v) -> String { return String(TRANS("Pre Level: ")) + Decibels::toString(Decibels::gainToDecibels((float)v), 1); };
         }
     }
 

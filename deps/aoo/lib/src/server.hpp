@@ -24,6 +24,12 @@ namespace net {
 
 class server;
 
+#ifdef _WIN32
+    using socket_type = SOCKET;
+#else
+    using socket_type = int;
+#endif
+
 struct user;
 using user_list = std::vector<std::shared_ptr<user>>;
 
@@ -34,18 +40,18 @@ using group_list = std::vector<std::shared_ptr<group>>;
 class client_endpoint {
     server *server_;
 public:
-    client_endpoint(server &s, int sock, const ip_address& addr);
+    client_endpoint(server &s, socket_type sock, const ip_address& addr);
     ~client_endpoint();
 
     void close(bool notify=true);
 
-    bool is_active() const { return socket >= 0; }
+    bool is_active() const { return socket != (socket_type)-1; }
 
     void send_message(const char *msg, int32_t);
 
     bool receive_data();
 
-    int socket = -1;
+    socket_type socket = (socket_type)-1;
 #ifdef _WIN32
     HANDLE event;
 #endif
@@ -145,7 +151,7 @@ public:
         };
     };
 
-    server(int tcpsocket, int udpsocket);
+    server(socket_type tcpsocket, socket_type udpsocket);
     ~server();
 
     int32_t run() override;
@@ -184,8 +190,8 @@ public:
 
 
 private:
-    int tcpsocket_;
-    int udpsocket_;
+    socket_type tcpsocket_;
+    socket_type udpsocket_;
 #ifdef _WIN32
     HANDLE tcpevent_;
     HANDLE udpevent_;

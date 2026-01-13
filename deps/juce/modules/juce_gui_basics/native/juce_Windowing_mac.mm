@@ -520,25 +520,34 @@ static Image createNSWindowSnapshot (NSWindow* nsWindow)
 {
     JUCE_AUTORELEASEPOOL
     {
-        // CGWindowListCreateImage is replaced by functions in the ScreenCaptureKit framework, but
-        // that framework is only available from macOS 12.3 onwards.
-        // A suitable @available check should be added once the minimum build OS is 12.3 or greater,
-        // so that ScreenCaptureKit can be weak-linked.
+    // CGWindowListCreateImage is replaced by functions in the ScreenCaptureKit framework.
+    // On macOS SDK 15 and later this API has been marked unavailable/obsoleted and will fail
+    // to compile. Guard against compiling that call on newer SDKs and fall back to an
+    // empty snapshot here. A proper implementation using ScreenCaptureKit should be added
+    // when targeting newer macOS versions.
+       #if defined(MAC_OS_VERSION_15_0) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_VERSION_15_0
+    return {};
+       #else
+    // For older SDKs, keep the existing behaviour (suppress deprecated warnings when needed)
        #if defined (MAC_OS_VERSION_14_0) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_VERSION_14_0
-        JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wdeprecated-declarations")
-        #define JUCE_DEPRECATION_IGNORED 1
+    JUCE_BEGIN_IGNORE_WARNINGS_GCC_LIKE ("-Wdeprecated-declarations")
+    #define JUCE_DEPRECATION_IGNORED 1
        #endif
 
-        CGImageRef screenShot = CGWindowListCreateImage (CGRectNull,
-                                                         kCGWindowListOptionIncludingWindow,
-                                                         (CGWindowID) [nsWindow windowNumber],
-                                                         kCGWindowImageBoundsIgnoreFraming);
+    CGImageRef screenShot = CGWindowListCreateImage (CGRectNull,
+                             kCGWindowListOptionIncludingWindow,
+                             (CGWindowID) [nsWindow windowNumber],
+                             kCGWindowImageBoundsIgnoreFraming);
 
        #if JUCE_DEPRECATION_IGNORED
-        JUCE_END_IGNORE_WARNINGS_GCC_LIKE
-        #undef JUCE_DEPRECATION_IGNORED
+    JUCE_END_IGNORE_WARNINGS_GCC_LIKE
+    #undef JUCE_DEPRECATION_IGNORED
+       #endif
        #endif
 
+       #if defined(MAC_OS_VERSION_15_0) && MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_VERSION_15_0
+        return {};
+       #else
         NSBitmapImageRep* bitmapRep = [[NSBitmapImageRep alloc] initWithCGImage: screenShot];
 
         Image result (Image::ARGB, (int) [bitmapRep size].width, (int) [bitmapRep size].height, true);
@@ -551,6 +560,7 @@ static Image createNSWindowSnapshot (NSWindow* nsWindow)
         CGImageRelease (screenShot);
 
         return result;
+       #endif
     }
 }
 

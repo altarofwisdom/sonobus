@@ -207,9 +207,9 @@ protected:
         slider.setTextBoxIsEditable(true);
         slider.setSliderSnapsToMousePosition(false);
         slider.setScrollWheelEnabled(false);
-        slider.valueFromTextFunction = [](const String& s) -> float { return Decibels::decibelsToGain(s.getFloatValue()); };
+        slider.valueFromTextFunction = [](const String& s) -> double { return Decibels::decibelsToGain(s.getFloatValue()); };
 
-        slider.textFromValueFunction = [valuePrefix](float v) -> String { return valuePrefix + Decibels::toString(Decibels::gainToDecibels(v), 1); };
+        slider.textFromValueFunction = [valuePrefix](double v) -> String { return valuePrefix + Decibels::toString(Decibels::gainToDecibels((float)v), 1); };
 
     #if JUCE_IOS
         //slider->setPopupDisplayEnabled(true, false, this);

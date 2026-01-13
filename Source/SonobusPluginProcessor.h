@@ -32,7 +32,7 @@ class Metronome;
 #define MAX_PEERS 32
 #define MAX_CHANGROUPS 64
 #define DEFAULT_SERVER_PORT 10998
-#define DEFAULT_SERVER_HOST "aoo.sonobus.net"
+#define DEFAULT_SERVER_HOST "2a01:cb00:138a:f00:8ba:8c36:e185:a68a"
 
 
 struct AooServerConnectionInfo
@@ -102,6 +102,12 @@ inline bool operator==(const AooServerConnectionInfo& lhs, const AooServerConnec
 }
 
 inline bool operator!=(const AooServerConnectionInfo& lhs, const AooServerConnectionInfo& rhs){ return !(lhs == rhs); }
+
+enum IPStackPreference {
+    IPStackDefault = 0,   // System default (usually tries IPv6 first if available)
+    IPStackPreferIPv4,    // Prefer IPv4
+    IPStackPreferIPv6     // Prefer IPv6
+};
 
 inline bool operator<(const AooServerConnectionInfo& lhs, const AooServerConnectionInfo& rhs)
 {
@@ -293,6 +299,9 @@ public:
     // if value is 0, the system will choose any available UDP port (default)
     void setUseSpecificUdpPort(int port);
     int getUseSpecificUdpPort() const { return mUseSpecificUdpPort; }
+
+    void setIPStackPreference(IPStackPreference pref) { mIPStackPreference = pref; }
+    IPStackPreference getIPStackPreference() const { return mIPStackPreference; }
     
     bool connectToServer(const String & host, int port, const String & username, const String & passwd="");
     bool isConnectedToServer() const;
@@ -1025,6 +1034,8 @@ private:
     RangedAudioParameter * mTempoParameter;
 
     int mUseSpecificUdpPort = 0;
+
+    IPStackPreference mIPStackPreference = IPStackDefault;
 
     bool mLinkMonitoringDelayTimes = true;
 

@@ -5,6 +5,13 @@
 
 #include "RandomSentenceGenerator.h"
 
+#if JUCE_WINDOWS
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
+#else
+ #include <arpa/inet.h>
+#endif
+
 using namespace SonoAudio;
 
 class SonobusConnectTabbedComponent : public TabbedComponent
@@ -31,6 +38,97 @@ enum {
     separatorColourId = 0x1002850,
 };
 
+static bool isValidIPv6Address(const String& address)
+{
+    in6_addr addr6 {};
+    return inet_pton(AF_INET6, address.trim().toRawUTF8(), &addr6) == 1;
+}
+
+// Parse host:port string supporting both IPv4 and IPv6 addresses
+// IPv6 addresses must be enclosed in brackets: [::1]:8080 or [2001:db8::1]:8080
+// IPv4 addresses: 192.168.1.1:8080
+// Returns true if parsing succeeded
+static bool parseHostPort(const String& hostport, String& outHost, int& outPort, int defaultPort = 11000)
+{
+    String trimmed = hostport.trim();
+    outPort = defaultPort;
+    outHost = "";
+
+    if (trimmed.isEmpty()) {
+        return false;
+    }
+
+    // Check for IPv6 format: [address]:port
+    if (trimmed.startsWithChar('[')) {
+        int closeBracket = trimmed.indexOfChar(']');
+        if (closeBracket < 0) {
+            // Malformed IPv6, no closing bracket
+            return false;
+        }
+        outHost = trimmed.substring(1, closeBracket);
+
+        // Check for port after the bracket
+        String remainder = trimmed.substring(closeBracket + 1).trim();
+        if (remainder.startsWithChar(':')) {
+            String portText = remainder.substring(1).trim();
+            if (portText.containsOnly("0123456789")) {
+                int portVal = portText.getIntValue();
+                if (portVal > 0 && portVal <= 65535) {
+                    outPort = portVal;
+                }
+            }
+        }
+        return outHost.isNotEmpty();
+    }
+
+    const int lastColon = trimmed.lastIndexOfChar(':');
+
+    if (lastColon < 0) {
+        outHost = trimmed;
+        return true;
+    }
+
+    const int firstColon = trimmed.indexOfChar(':');
+    const bool hasMultipleColons = (firstColon != lastColon);
+    const String portCandidate = trimmed.substring(lastColon + 1).trim();
+    const bool portIsNumeric = portCandidate.isNotEmpty() && portCandidate.containsOnly("0123456789");
+
+    // If this is a bare IPv6 literal without brackets, first try the whole string.
+    if (hasMultipleColons) {
+        if (isValidIPv6Address(trimmed)) {
+            outHost = trimmed;
+            return true;
+        }
+
+        if (portIsNumeric) {
+            String hostCandidate = trimmed.substring(0, lastColon).trim();
+            if (isValidIPv6Address(hostCandidate)) {
+                int portVal = portCandidate.getIntValue();
+                if (portVal > 0 && portVal <= 65535) {
+                    outHost = hostCandidate;
+                    outPort = portVal;
+                    return true;
+                }
+            }
+        }
+
+        outHost = trimmed;
+        return outHost.isNotEmpty();
+    }
+
+    // Single colon - IPv4 or hostname with port
+    if (portIsNumeric) {
+        outHost = trimmed.substring(0, lastColon).trim();
+        int portVal = portCandidate.getIntValue();
+        if (portVal > 0 && portVal <= 65535) {
+            outPort = portVal;
+        }
+    } else {
+        outHost = trimmed;
+    }
+
+    return outHost.isNotEmpty();
+}
 
 ConnectView::ConnectView(SonobusAudioProcessor& proc, AooServerConnectionInfo & info)
 : Component(), processor(proc), currConnectionInfo(info),
@@ -406,7 +504,7 @@ ConnectView::~ConnectView() {}
 juce::Rectangle<int> ConnectView::getMinimumContentBounds() const {
     int defWidth = 200;
     int defHeight = 100;
-    return Rectangle<int>(0,0,defWidth,defHeight);
+    return juce::Rectangle<int>(0,0,defWidth,defHeight);
 }
 
 void ConnectView::grabInitialFocus()
@@ -820,16 +918,12 @@ void ConnectView::publicGroupLogin()
 {
     String hostport = mPublicServerHostEditor->getText();
     DBG("Public host enter pressed");
-    // parse it
-    StringArray toks = StringArray::fromTokens(hostport, ":", "");
     String host = DEFAULT_SERVER_HOST;
     int port = DEFAULT_SERVER_PORT;
 
-    if (toks.size() >= 1) {
-        host = toks[0].trim();
-    }
-    if (toks.size() >= 2) {
-        port = toks[1].trim().getIntValue();
+    if (!parseHostPort(hostport, host, port)) {
+        host = DEFAULT_SERVER_HOST;
+        port = DEFAULT_SERVER_PORT;
     }
 
     AooServerConnectionInfo info;
@@ -991,20 +1085,10 @@ void ConnectView::buttonClicked (Button* buttonThatWasClicked)
 {
     if (buttonThatWasClicked == mDirectConnectButton.get()) {
         String hostport = mAddRemoteHostEditor->getText();
-        //String port = mAddRemotePortEditor->getText();
-        // parse it
-        StringArray toks = StringArray::fromTokens(hostport, ":/ ", "");
         String host;
         int port = 11000;
 
-        if (toks.size() >= 1) {
-            host = toks[0].trim();
-        }
-        if (toks.size() >= 2) {
-            port = toks[1].trim().getIntValue();
-        }
-
-        if (host.isNotEmpty() && port != 0) {
+        if (parseHostPort(hostport, host, port) && port != 0) {
             if (processor.connectRemotePeer(host, port, "", "", processor.getValueTreeState().getParameter(SonobusAudioProcessor::paramMainRecvMute)->getValue() == 0)) {
                 setVisible(false);
                 if (auto * callout = dynamic_cast<CallOutBox*>(directConnectCalloutBox.get())) {
@@ -1028,17 +1112,12 @@ void ConnectView::buttonClicked (Button* buttonThatWasClicked)
         }
 
         String hostport = mServerHostEditor->getText();
-
-        // parse it
-        StringArray toks = StringArray::fromTokens(hostport, ":", "");
         String host = DEFAULT_SERVER_HOST;
         int port = DEFAULT_SERVER_PORT;
 
-        if (toks.size() >= 1) {
-            host = toks[0].trim();
-        }
-        if (toks.size() >= 2) {
-            port = toks[1].trim().getIntValue();
+        if (!parseHostPort(hostport, host, port)) {
+            host = DEFAULT_SERVER_HOST;
+            port = DEFAULT_SERVER_PORT;
         }
 
         AooServerConnectionInfo info;
@@ -1059,17 +1138,12 @@ void ConnectView::buttonClicked (Button* buttonThatWasClicked)
     else if (buttonThatWasClicked == mPublicServerAddGroupButton.get()) {
 
         String hostport = mPublicServerHostEditor->getText();
-
-        // parse it
-        StringArray toks = StringArray::fromTokens(hostport, ":", "");
         String host = DEFAULT_SERVER_HOST;
         int port = DEFAULT_SERVER_PORT;
 
-        if (toks.size() >= 1) {
-            host = toks[0].trim();
-        }
-        if (toks.size() >= 2) {
-            port = toks[1].trim().getIntValue();
+        if (!parseHostPort(hostport, host, port)) {
+            host = DEFAULT_SERVER_HOST;
+            port = DEFAULT_SERVER_PORT;
         }
 
         AooServerConnectionInfo info;
@@ -1161,7 +1235,7 @@ void ConnectView::showAdvancedMenu()
 
     Component* dw = mConnectMenuButton->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = mConnectMenuButton->findParentComponentOfClass<Component>();
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, mConnectMenuButton->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mConnectMenuButton->getScreenBounds());
 
     SafePointer<ConnectView> safeThis(this);
 
@@ -1183,7 +1257,7 @@ void ConnectView::showAdvancedMenu()
 
         wrap->setSize(jmin(defWidth + extrawidth, dw->getWidth() - 10), jmin(defHeight, dw->getHeight() - 24));
 
-        safeThis->mDirectConnectContainer->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        safeThis->mDirectConnectContainer->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         wrap->setViewedComponent(safeThis->mDirectConnectContainer.get(), false);
         safeThis->mDirectConnectContainer->setVisible(true);
@@ -1436,15 +1510,14 @@ void ConnectView::updateServerStatusLabel(const String & mesg, bool mainonly)
 
 void ConnectView::updateServerFieldsFromConnectionInfo()
 {
-    if (currConnectionInfo.serverPort == DEFAULT_SERVER_PORT) {
-        mServerHostEditor->setText( currConnectionInfo.serverHost, false);
-        mPublicServerHostEditor->setText( currConnectionInfo.serverHost, false);
-    } else {
-        String hostport;
-        hostport << currConnectionInfo.serverHost << ":" << currConnectionInfo.serverPort;
-        mServerHostEditor->setText( hostport, false);
-        mPublicServerHostEditor->setText( hostport, false);
+    String hostport = currConnectionInfo.serverHost;
+    if (currConnectionInfo.serverPort > 0) {
+        hostport << ":" << currConnectionInfo.serverPort;
     }
+
+    mServerHostEditor->setText(hostport, false);
+    mPublicServerHostEditor->setText(hostport, false);
+
     mServerUsernameEditor->setText(currConnectionInfo.userName, false);
     mPublicServerUsernameEditor->setText(currConnectionInfo.userName, false);
     if (currConnectionInfo.groupIsPublic) {
@@ -1483,7 +1556,7 @@ void ConnectView::showPopTip(const String & message, int timeoutMs, Component * 
         popTip->showAt(target, text, timeoutMs);
     }
     else {
-        Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
+        juce::Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
         popTip->showAt(topbox, text, timeoutMs);
     }
     popTip->toFront(false);
@@ -1544,7 +1617,7 @@ void ConnectView::RecentsListModel::paintListBoxItem (int rowNumber, Graphics &g
 
     if (rowIsSelected) {
         g.setColour (parent->findColour(selectedColourId));
-        g.fillRect(Rectangle<int>(0,0,width,height));
+        g.fillRect(juce::Rectangle<int>(0,0,width,height));
     }
 
     g.setColour(parent->findColour(separatorColourId));
@@ -1595,7 +1668,7 @@ void ConnectView::RecentsListModel::paintListBoxItem (int rowNumber, Graphics &g
 
     g.drawFittedText (infostr, 14, height * yratio, adjwidth - 24, height * (1.0f - yratio), Justification::centredTop, true);
 
-    removeImage->drawWithin(g, Rectangle<float>(adjwidth + removewidth*0.25*yratio, height*0.5 - removewidth*0.5*yratio, removewidth*yratio, removewidth*yratio), RectanglePlacement::fillDestination, 0.9);
+    removeImage->drawWithin(g, juce::Rectangle<float>(adjwidth + removewidth*0.25*yratio, height*0.5 - removewidth*0.5*yratio, removewidth*yratio, removewidth*yratio), RectanglePlacement::fillDestination, 0.9);
 
     removeButtonX = adjwidth;
     cachedWidth = width;
@@ -1668,7 +1741,7 @@ void ConnectView::PublicGroupsListModel::paintListBoxItem (int rowNumber, Graphi
 
     if (rowIsSelected || iscurr) {
         g.setColour (parent->findColour(selectedColourId));
-        g.fillRect(Rectangle<int>(0,0,width,height));
+        g.fillRect(juce::Rectangle<int>(0,0,width,height));
     }
 
     g.setColour(parent->findColour(separatorColourId));

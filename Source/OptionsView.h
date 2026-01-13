@@ -124,6 +124,8 @@ protected:
 
     std::unique_ptr<ToggleButton> mOptionsUseSpecificUdpPortButton;
     std::unique_ptr<TextEditor>  mOptionsUdpPortEditor;
+    std::unique_ptr<SonoChoiceButton> mOptionsIPStackChoice;
+    std::unique_ptr<Label> mOptionsIPStackLabel;
     std::unique_ptr<Label> mVersionLabel;
     std::unique_ptr<ToggleButton> mOptionsChangeAllFormatButton;
 
@@ -173,6 +175,7 @@ protected:
     FlexBox optionsSendQualBox;
     FlexBox optionsHearlatBox;
     FlexBox optionsUdpBox;
+    FlexBox optionsIPStackBox;
     FlexBox optionsDynResampleBox;
     FlexBox optionsOverrideSamplerateBox;
     FlexBox optionsCheckForUpdateBox;

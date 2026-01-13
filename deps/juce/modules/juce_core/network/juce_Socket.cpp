@@ -723,6 +723,16 @@ DatagramSocket::DatagramSocket (bool canBroadcast)
            #endif
             handle = (int) socket (AF_INET, SOCK_DGRAM, 0);
         }
+       #if JUCE_WINDOWS
+        else
+        {
+            // On Windows, set IPV6_PROTECTION_LEVEL to PROTECTION_LEVEL_UNRESTRICTED (10)
+            // to allow sending/receiving UDP packets to/from global IPv6 addresses.
+            int protection_level = 10; // PROTECTION_LEVEL_UNRESTRICTED
+            setsockopt ((SocketHandle) handle.load(), IPPROTO_IPV6, IPV6_PROTECTION_LEVEL,
+                        (const char*) &protection_level, sizeof (protection_level));
+        }
+       #endif
     }
     else
     {

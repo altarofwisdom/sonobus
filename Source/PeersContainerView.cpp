@@ -255,8 +255,8 @@ void PeersContainerView::configLevelSlider(Slider * slider)
     slider->setTextBoxIsEditable(true);
     slider->setSliderSnapsToMousePosition(false);
     slider->setScrollWheelEnabled(false);
-    slider->valueFromTextFunction = [](const String& s) -> float { return Decibels::decibelsToGain(s.getFloatValue()); };
-    slider->textFromValueFunction = [](float v) -> String { return String(TRANS("Level: ")) + Decibels::toString(Decibels::gainToDecibels(v), 1); };
+    slider->valueFromTextFunction = [](const String& s) -> double { return Decibels::decibelsToGain(s.getFloatValue()); };
+    slider->textFromValueFunction = [](double v) -> String { return String(TRANS("Level: ")) + Decibels::toString(Decibels::gainToDecibels((float)v), 1); };
 #if JUCE_IOS
     //slider->setPopupDisplayEnabled(true, false, this);
 #endif

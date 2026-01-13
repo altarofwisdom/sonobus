@@ -9,6 +9,21 @@
 #include <algorithm>
 #include <sstream>
 #include <random>
+#include <vector>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 #include "md5/md5.h"
 
@@ -62,6 +77,81 @@
     AOONET_MSG_GROUP AOONET_MSG_PUBLIC
 
 
+namespace {
+
+namespace fs = std::filesystem;
+
+fs::path safe_current_path() {
+    std::error_code ec;
+    auto path = fs::current_path(ec);
+    if (ec) {
+        return fs::path();
+    }
+    return path;
+}
+
+fs::path get_exe_dir() {
+#ifdef _WIN32
+    wchar_t buffer[MAX_PATH];
+    DWORD len = GetModuleFileNameW(nullptr, buffer, MAX_PATH);
+    if (len > 0 && len < MAX_PATH) {
+        return fs::path(buffer).parent_path();
+    }
+#endif
+    return safe_current_path();
+}
+
+fs::path find_repo_root() {
+    std::error_code ec;
+    auto dir = get_exe_dir();
+    if (dir.empty()) {
+        dir = safe_current_path();
+    }
+    for (int i = 0; i < 10 && !dir.empty(); ++i) {
+        auto candidate = dir / "sonobus" / "AGENTS.md";
+        if (fs::exists(candidate, ec)) {
+            return dir;
+        }
+        auto parent = dir.parent_path();
+        if (parent == dir || parent.empty()) {
+            break;
+        }
+        dir = parent;
+    }
+    auto fallback = safe_current_path();
+    if (!fallback.empty()) {
+        return fallback;
+    }
+    return fs::path(".");
+}
+
+const fs::path& get_log_path() {
+    static fs::path log_path = find_repo_root() / "Log.txt";
+    return log_path;
+}
+
+const char *family_to_string(int family) {
+    switch (family) {
+    case AF_INET:
+        return "AF_INET";
+    case AF_INET6:
+        return "AF_INET6";
+    default:
+        return "AF_OTHER";
+    }
+}
+
+void append_client_log(const std::string& line) {
+    static std::mutex log_mutex;
+    std::lock_guard<std::mutex> lock(log_mutex);
+    std::ofstream stream(get_log_path(), std::ios::out | std::ios::app);
+    if (stream.is_open()) {
+        stream << line << '\n';
+    }
+}
+
+} // namespace
+
 
 namespace aoo {
 namespace net {
@@ -111,7 +201,7 @@ void * copy_sockaddr(const void * sa){
 }
 
 void free_sockaddr(const void * sa){
-    delete static_cast<const sockaddr *>(sa);
+    delete[] static_cast<const char *>(sa);
 }
 
 } // net
@@ -211,12 +301,12 @@ int32_t aoo::net::client::run(){
         time_tag now = time_tag::now();
         auto elapsed_time = time_tag::duration(start_time_, now);
 
-        if (tcpsocket_ >= 0 && state_.load() == client_state::connected){
+        if (tcpsocket_ != (socket_type)-1 && state_.load() == client_state::connected){
             auto delta = elapsed_time - last_tcp_ping_time_;
             auto ping_interval = ping_interval_.load();
             if (delta >= ping_interval){
                 // send ping
-                if (tcpsocket_ >= 0){
+                if (tcpsocket_ != (socket_type)-1){
                     char buf[64];
                     osc::OutboundPacketStream msg(buf, sizeof(buf));
                     msg << osc::BeginMessage(AOONET_MSG_SERVER_PING)
@@ -259,13 +349,14 @@ int32_t aoo::net::client::quit(){
 }
 
 int32_t aoonet_client_connect(aoonet_client *client, const char *host, int port,
-                           const char *username, const char *pwd)
+                           const char *username, const char *pwd, int ip_stack_pref)
 {
-    return client->connect(host, port, username, pwd);
+    return client->connect(host, port, username, pwd, ip_stack_pref);
 }
 
 int32_t aoo::net::client::connect(const char *host, int port,
-                             const char *username, const char *pwd)
+                             const char *username, const char *pwd,
+                             int ip_stack_pref)
 {
     auto state = state_.load();
     if (state != client_state::disconnected){
@@ -282,7 +373,7 @@ int32_t aoo::net::client::connect(const char *host, int port,
 
     state_ = client_state::connecting;
 
-    push_command(std::make_unique<connect_cmd>(host, port));
+    push_command(std::make_unique<connect_cmd>(host, port, ip_stack_pref));
 
     signal();
 
@@ -358,6 +449,7 @@ int32_t aoo::net::client::handle_message(const char *data, int32_t n, void *addr
     if (family != AF_INET && family != AF_INET6){
         return 0;
     }
+    auto state = state_.load();
     try {
         osc::ReceivedPacket packet(data, n);
         osc::ReceivedMessage msg(packet);
@@ -365,6 +457,10 @@ int32_t aoo::net::client::handle_message(const char *data, int32_t n, void *addr
         int32_t type;
         auto onset = aoonet_parse_pattern(data, n, &type);
         if (!onset){
+            if (state == client_state::handshake){
+                append_client_log("aoo_client: udp_recv not AOO NET message family="
+                    + std::to_string(family) + " n=" + std::to_string(n));
+            }
             LOG_WARNING("aoo_client: not an AOO NET message!");
             return 0;
         }
@@ -372,12 +468,24 @@ int32_t aoo::net::client::handle_message(const char *data, int32_t n, void *addr
         socklen_t addrlen = (family == AF_INET6) ? sizeof(sockaddr_in6) : sizeof(sockaddr_in);
         ip_address address((struct sockaddr *)addr, addrlen);
 
+        if (state == client_state::handshake){
+            append_client_log("aoo_client: udp_recv pattern=" + std::string(msg.AddressPattern())
+                + " type=" + std::to_string(type)
+                + " from=" + address.name() + ":" + std::to_string(address.port())
+                + " remote=" + remote_addr_.name() + ":" + std::to_string(remote_addr_.port()));
+        }
+
         LOG_DEBUG("aoo_client: handle UDP message " << msg.AddressPattern()
             << " from " << address.name() << ":" << address.port());
 
         if (address == remote_addr_){
             // server message
             if (type != AOO_TYPE_CLIENT){
+                if (state == client_state::handshake){
+                    append_client_log("aoo_client: udp_recv from server addr but type="
+                        + std::to_string(type)
+                        + " pattern=" + std::string(msg.AddressPattern()));
+                }
                 LOG_WARNING("aoo_client: not a server message!");
                 return 0;
             }
@@ -386,6 +494,12 @@ int32_t aoo::net::client::handle_message(const char *data, int32_t n, void *addr
         } else {
             // peer message
             if (type != AOO_TYPE_PEER){
+                if (state == client_state::handshake){
+                    append_client_log("aoo_client: udp_recv from non-server addr type="
+                        + std::to_string(type)
+                        + " pattern=" + std::string(msg.AddressPattern())
+                        + " addr=" + address.name() + ":" + std::to_string(address.port()));
+                }
                 LOG_WARNING("aoo_client: not a peer message!");
                 return 0;
             }
@@ -455,8 +569,18 @@ int32_t aoo::net::client::send(){
             // check for time out
             if (first_udp_ping_time_ == 0){
                 first_udp_ping_time_ = elapsed_time;
+                append_client_log("aoo_client: handshake start elapsed="
+                    + std::to_string(elapsed_time)
+                    + " remote=" + remote_addr_.name()
+                    + ":" + std::to_string(remote_addr_.port()));
             } else if ((elapsed_time - first_udp_ping_time_) > request_timeout()){
                 // request has timed out!
+                append_client_log("aoo_client: handshake timeout elapsed="
+                    + std::to_string(elapsed_time)
+                    + " first=" + std::to_string(first_udp_ping_time_)
+                    + " timeout=" + std::to_string(request_timeout())
+                    + " remote=" + remote_addr_.name()
+                    + ":" + std::to_string(remote_addr_.port()));
                 first_udp_ping_time_ = 0;
 
                 push_command(std::make_unique<disconnect_cmd>(command_reason::timeout));
@@ -472,6 +596,10 @@ int32_t aoo::net::client::send(){
                 msg << osc::BeginMessage(AOONET_MSG_SERVER_REQUEST) << osc::EndMessage;
 
                 send_server_message_udp(msg.Data(), (int32_t) msg.Size());
+                append_client_log("aoo_client: handshake request udp -> "
+                    + remote_addr_.name() + ":" + std::to_string(remote_addr_.port())
+                    + " elapsed=" + std::to_string(elapsed_time)
+                    + " delta=" + std::to_string(delta));
                 last_udp_ping_time_ = elapsed_time;
             }
         } else if (state == client_state::connected){
@@ -537,14 +665,14 @@ int32_t aoo::net::client::handle_events(aoo_eventhandler fn, void *user){
 namespace aoo {
 namespace net {
 
-void client::do_connect(const std::string &host, int port)
+void client::do_connect(const std::string &host, int port, int ip_stack_pref)
 {
-    if (tcpsocket_ >= 0){
+    if (tcpsocket_ != (socket_type)-1){
         LOG_ERROR("aoo_client: bug client::do_connect()");
         return;
     }
 
-    int err = try_connect(host, port);
+    int err = try_connect(host, port, ip_stack_pref);
     if (err != 0){
         // event
         std::string errmsg = socket_strerror(err);
@@ -563,7 +691,7 @@ void client::do_connect(const std::string &host, int port)
 }
 
 void client::do_disconnect(command_reason reason, int error){
-    if (tcpsocket_ >= 0){
+    if (tcpsocket_ != (socket_type)-1){
     #ifdef _WIN32
         // unregister event from socket.
         // actually, I think this happens automatically when closing the socket.
@@ -605,12 +733,26 @@ void client::do_disconnect(command_reason reason, int error){
     state_ = client_state::disconnected;
 }
 
-int client::try_connect(const std::string &host, int port){
+int client::try_connect(const std::string &host, int port, int ip_stack_pref){
     // Use getaddrinfo to resolve host name (supports both IPv4 and IPv6)
     struct addrinfo hints, *res = nullptr;
     memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_UNSPEC;  // Allow IPv4 or IPv6
+    if (ip_stack_pref == 1) {
+        // Prefer IPv4: force IPv4-only resolution.
+        hints.ai_family = AF_INET;
+    } else if (ip_stack_pref == 2) {
+        // Prefer IPv6: force IPv6-only resolution.
+        hints.ai_family = AF_INET6;
+    } else {
+        // Default: allow IPv4 or IPv6.
+        hints.ai_family = AF_UNSPEC;
+    }
     hints.ai_socktype = SOCK_STREAM;
+
+    append_client_log("aoo_client: try_connect host=" + host
+        + " port=" + std::to_string(port)
+        + " ip_stack_pref=" + std::to_string(ip_stack_pref)
+        + " hints_family=" + std::string(family_to_string(hints.ai_family)));
 
     char port_str[16];
     snprintf(port_str, sizeof(port_str), "%d", port);
@@ -618,21 +760,60 @@ int client::try_connect(const std::string &host, int port){
     int gai_err = getaddrinfo(host.c_str(), port_str, &hints, &res);
     if (gai_err != 0 || res == nullptr){
         int err = socket_errno();
+        append_client_log("aoo_client: getaddrinfo failed gai_err="
+            + std::to_string(gai_err) + " sock_err=" + std::to_string(err));
         LOG_ERROR("aoo_client: couldn't resolve host (" << gai_err << ")");
         return err ? err : -1;
+    }
+
+    // Reorder addresses based on ip_stack_pref
+    // 0 = default (try in order returned), 1 = prefer IPv4, 2 = prefer IPv6
+    std::vector<struct addrinfo*> addr_list;
+    for (struct addrinfo *rp = res; rp != nullptr; rp = rp->ai_next) {
+        addr_list.push_back(rp);
+    }
+
+    if (ip_stack_pref == 1) {
+        // Prefer IPv4: sort IPv4 addresses first
+        std::stable_sort(addr_list.begin(), addr_list.end(),
+            [](struct addrinfo* a, struct addrinfo* b) {
+                return (a->ai_family == AF_INET) && (b->ai_family != AF_INET);
+            });
+    } else if (ip_stack_pref == 2) {
+        // Prefer IPv6: sort IPv6 addresses first
+        std::stable_sort(addr_list.begin(), addr_list.end(),
+            [](struct addrinfo* a, struct addrinfo* b) {
+                return (a->ai_family == AF_INET6) && (b->ai_family != AF_INET6);
+            });
+    }
+
+    int addr_index = 0;
+    for (struct addrinfo *rp : addr_list) {
+        ip_address addr((struct sockaddr *)rp->ai_addr, (socklen_t)rp->ai_addrlen);
+        append_client_log("aoo_client: addr[" + std::to_string(addr_index++) + "] "
+            + addr.name() + ":" + std::to_string(addr.port())
+            + " family=" + std::string(family_to_string(rp->ai_family)));
     }
 
     // Try each address until we successfully connect
     int last_err = 0;
     bool connected = false;
-    for (struct addrinfo *rp = res; rp != nullptr; rp = rp->ai_next) {
-        tcpsocket_ = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (tcpsocket_ < 0){
+    for (struct addrinfo *rp : addr_list) {
+        tcpsocket_ = (socket_type)socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        if (tcpsocket_ == (socket_type)-1){
             last_err = socket_errno();
+            append_client_log("aoo_client: socket failed family="
+                + std::string(family_to_string(rp->ai_family))
+                + " err=" + std::to_string(last_err)
+                + " msg=" + socket_strerror(last_err));
             continue;
         }
 
         remote_addr_ = ip_address((struct sockaddr *)rp->ai_addr, (socklen_t)rp->ai_addrlen);
+
+        append_client_log("aoo_client: connect attempt addr=" + remote_addr_.name()
+            + ":" + std::to_string(remote_addr_.port())
+            + " family=" + std::string(family_to_string(rp->ai_family)));
 
         // set TCP_NODELAY
         int val = 1;
@@ -641,12 +822,88 @@ int client::try_connect(const std::string &host, int port){
             // ignore
         }
 
+#ifdef _WIN32
+        // On Windows, IPv6 sockets need IPV6_PROTECTION_LEVEL set to PROTECTION_LEVEL_UNRESTRICTED (10)
+        // to allow connections to global-scope IPv6 addresses. Without this, connect() fails with
+        // WSAEACCES (10013) for remote IPv6 hosts.
+        if (rp->ai_family == AF_INET6) {
+            int protection_level = 10; // PROTECTION_LEVEL_UNRESTRICTED
+            if (setsockopt(tcpsocket_, IPPROTO_IPV6, IPV6_PROTECTION_LEVEL,
+                           (char *)&protection_level, sizeof(protection_level)) < 0) {
+                int err = socket_errno();
+                append_client_log("aoo_client: setsockopt IPV6_PROTECTION_LEVEL failed err="
+                    + std::to_string(err) + " msg=" + socket_strerror(err));
+                LOG_WARNING("aoo_client: couldn't set IPV6_PROTECTION_LEVEL");
+            } else {
+                append_client_log("aoo_client: setsockopt IPV6_PROTECTION_LEVEL=10 success");
+            }
+            
+            // Explicitly bind to any IPv6 address with ephemeral port.
+            // This can help avoid WSAEACCES errors on some Windows configurations.
+            struct sockaddr_in6 bind_addr;
+            memset(&bind_addr, 0, sizeof(bind_addr));
+            bind_addr.sin6_family = AF_INET6;
+            bind_addr.sin6_addr = in6addr_any;
+            bind_addr.sin6_port = 0; // Let system choose port
+            if (bind(tcpsocket_, (struct sockaddr*)&bind_addr, sizeof(bind_addr)) < 0) {
+                int err = socket_errno();
+                append_client_log("aoo_client: bind to [::]:0 failed err="
+                    + std::to_string(err) + " msg=" + socket_strerror(err));
+                LOG_WARNING("aoo_client: couldn't bind IPv6 socket");
+            } else {
+                append_client_log("aoo_client: bind to [::]:0 success");
+            }
+        }
+#endif
+
         // try to connect (LATER make timeout configurable)
+        auto connect_start = std::chrono::steady_clock::now();
+        
+#ifdef _WIN32
+        // On Windows, try direct blocking connect for IPv6 to diagnose WSAEACCES issues
+        int connect_result;
+        if (rp->ai_family == AF_INET6) {
+            // Try direct blocking connect for IPv6
+            connect_result = ::connect(tcpsocket_, (const struct sockaddr *)&remote_addr_.address, remote_addr_.length);
+            if (connect_result < 0) {
+                last_err = socket_errno();
+                append_client_log("aoo_client: direct connect failed addr=" + remote_addr_.name()
+                    + ":" + std::to_string(remote_addr_.port())
+                    + " family=" + std::string(family_to_string(rp->ai_family))
+                    + " err=" + std::to_string(last_err)
+                    + " msg=" + socket_strerror(last_err));
+            }
+        } else {
+            connect_result = socket_connect(tcpsocket_, remote_addr_, 5);
+            if (connect_result < 0) {
+                last_err = socket_errno();
+            }
+        }
+        if (connect_result < 0){
+#else
         if (socket_connect(tcpsocket_, remote_addr_, 5) < 0){
             last_err = socket_errno();
-            socket_close(tcpsocket_);
-            tcpsocket_ = -1;
+#endif
+            auto connect_end = std::chrono::steady_clock::now();
+            auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                connect_end - connect_start).count();
+            append_client_log("aoo_client: connect failed addr=" + remote_addr_.name()
+                + ":" + std::to_string(remote_addr_.port())
+                + " family=" + std::string(family_to_string(rp->ai_family))
+                + " err=" + std::to_string(last_err)
+                + " msg=" + socket_strerror(last_err)
+                + " elapsed_ms=" + std::to_string(elapsed_ms));
+            socket_close((socket_type)tcpsocket_);
+            tcpsocket_ = (socket_type)-1;
             continue;
+        } else {
+            auto connect_end = std::chrono::steady_clock::now();
+            auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                connect_end - connect_start).count();
+            append_client_log("aoo_client: connect ok addr=" + remote_addr_.name()
+                + ":" + std::to_string(remote_addr_.port())
+                + " family=" + std::string(family_to_string(rp->ai_family))
+                + " elapsed_ms=" + std::to_string(elapsed_ms));
         }
 
         connected = true;
@@ -662,12 +919,16 @@ int client::try_connect(const std::string &host, int port){
 
     // get local network interface
     ip_address tmp;
+    tmp.length = sizeof(tmp.address);
     if (getsockname(tcpsocket_,
                     (struct sockaddr *)&tmp.address, &tmp.length) < 0) {
         int err = socket_errno();
         LOG_ERROR("aoo_client: couldn't get socket name (" << err << ")");
         return err;
     }
+    append_client_log("aoo_client: tcp_local=" + tmp.name()
+        + ":" + std::to_string(tmp.port())
+        + " family=" + std::string(family_to_string(tmp.family())));
     local_addr_ = ip_address(tmp.name(), udpport_);
 
 #ifdef _WIN32
@@ -750,7 +1011,7 @@ void client::wait_for_event(float timeout){
     HANDLE events[2];
     int numevents;
     events[0] = waitevent_;
-    if (tcpsocket_ >= 0){
+    if (tcpsocket_ != (socket_type)-1){
         events[1] = sockevent_;
         numevents = 2;
     } else {
@@ -925,7 +1186,7 @@ void client::receive_data(){
 }
 
 void client::send_server_message_tcp(const char *data, int32_t size){
-    if (tcpsocket_ >= 0){
+    if (tcpsocket_ != (socket_type)-1){
         if (sendbuffer_.write_packet((const uint8_t *)data, size)){
             // try to send as much as possible until send() would block
             while (true){
@@ -1209,6 +1470,10 @@ void client::handle_server_message_udp(const osc::ReceivedMessage &msg, int onse
     auto pattern = msg.AddressPattern() + onset;
     try {
         if (!strcmp(pattern, AOONET_MSG_PING)){
+            if (state_.load() == client_state::handshake){
+                append_client_log("aoo_client: server UDP ping during handshake from "
+                    + remote_addr_.name() + ":" + std::to_string(remote_addr_.port()));
+            }
             LOG_DEBUG("aoo_client: got UDP ping from server");
         } else if (!strcmp(pattern, AOONET_MSG_REPLY)){
             client_state expected = client_state::handshake;
@@ -1218,6 +1483,10 @@ void client::handle_server_message_udp(const osc::ReceivedMessage &msg, int onse
                 std::string ip = (it++)->AsString();
                 int port = (it++)->AsInt32();
                 public_addr_ = ip_address(ip, port);
+                append_client_log("aoo_client: server UDP reply public="
+                    + public_addr_.name() + ":" + std::to_string(public_addr_.port())
+                    + " local=" + local_addr_.name() + ":" + std::to_string(local_addr_.port())
+                    + " remote=" + remote_addr_.name() + ":" + std::to_string(remote_addr_.port()));
                 LOG_VERBOSE("aoo_client: public endpoint is "
                             << public_addr_.name() << " " << public_addr_.port());
 
@@ -1225,8 +1494,15 @@ void client::handle_server_message_udp(const osc::ReceivedMessage &msg, int onse
                 push_command(std::make_unique<login_cmd>());
 
                 signal();
+            } else {
+                append_client_log("aoo_client: server UDP reply ignored state="
+                    + std::to_string(static_cast<int>(expected)));
             }
         } else {
+            if (state_.load() == client_state::handshake){
+                append_client_log("aoo_client: unknown server UDP message "
+                    + std::string(pattern));
+            }
             LOG_WARNING("aoo_client: received unknown UDP message "
                         << pattern << " from server");
         }
@@ -1257,7 +1533,7 @@ client::event::event(int32_t type, int32_t result,
 
 client::event::~event()
 {
-    delete client_event_.errormsg;
+    delete[] client_event_.errormsg;
 }
 
 client::group_event::group_event(int32_t type, const char *name,
@@ -1271,8 +1547,8 @@ client::group_event::group_event(int32_t type, const char *name,
 
 client::group_event::~group_event()
 {
-    delete group_event_.errormsg;
-    delete group_event_.name;
+    delete[] group_event_.errormsg;
+    delete[] group_event_.name;
 }
 
 client::peer_event::peer_event(int32_t type,
@@ -1290,8 +1566,8 @@ client::peer_event::peer_event(int32_t type,
 
 client::peer_event::~peer_event()
 {
-    delete peer_event_.user;
-    delete peer_event_.group;
+    delete[] peer_event_.user;
+    delete[] peer_event_.group;
     if (peer_event_.address) {
         free_sockaddr(peer_event_.address);
     }
@@ -1371,6 +1647,9 @@ void peer::send(time_tag now){
                       << client_->request_timeout() << " seconds");
             timeout_ = true;
 
+            append_client_log("aoo_client: peer timeout user=" + user_ + " group=" + group_
+                + " local=" + local_address_.name() + ":" + std::to_string(local_address_.port())
+                + " public=" + public_address_.name() + ":" + std::to_string(public_address_.port()));
 
             // this at least lets us present to the user that a particular user@group failed to establish
             auto e = std::make_unique<client::peer_event>(
@@ -1386,6 +1665,10 @@ void peer::send(time_tag now){
             char buf[80];
             osc::OutboundPacketStream msg(buf, sizeof(buf));
             msg << osc::BeginMessage(AOONET_MSG_PEER_PING) << client_->get_token() << osc::EndMessage;
+
+            append_client_log("aoo_client: peer ping user=" + user_ + " group=" + group_
+                + " local=" + local_address_.name() + ":" + std::to_string(local_address_.port())
+                + " public=" + public_address_.name() + ":" + std::to_string(public_address_.port()));
 
             client_->send_message_udp(msg.Data(), (int32_t) msg.Size(), local_address_);
             client_->send_message_udp(msg.Data(), (int32_t) msg.Size(), public_address_);

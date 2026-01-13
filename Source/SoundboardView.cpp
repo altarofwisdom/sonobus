@@ -202,8 +202,8 @@ void SoundboardView::createControlPanel()
     mVolumeSlider->setScrollWheelEnabled(false);
     mVolumeSlider->setWantsKeyboardFocus(true);
     mVolumeSlider->setMouseDragSensitivity(90);
-    mVolumeSlider->valueFromTextFunction = [](const String& s) -> float { return Decibels::decibelsToGain(s.getFloatValue()); };
-    mVolumeSlider->textFromValueFunction = [](float v) -> String { return String(TRANS("Level: ")) + Decibels::toString(Decibels::gainToDecibels(v), 1); };
+    mVolumeSlider->valueFromTextFunction = [](const String& s) -> double { return Decibels::decibelsToGain(s.getFloatValue()); };
+    mVolumeSlider->textFromValueFunction = [](double v) -> String { return String(TRANS("Level: ")) + Decibels::toString(Decibels::gainToDecibels((float)v), 1); };
     mVolumeSlider->setLookAndFeel(&volSliderLNF);
     mVolumeSlider->setTextBoxStyle(Slider::NoTextBox, true, 60, 14);
     mVolumeSlider->setValue(audioProcessor.getSoundboardProcessor()->getGain());

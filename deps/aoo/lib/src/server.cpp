@@ -219,7 +219,7 @@ aoonet_server * aoonet_server_new(int port, int32_t *err) {
     return new aoo::net::server(tcpsocket, udpsocket);
 }
 
-aoo::net::server::server(int tcpsocket, int udpsocket)
+aoo::net::server::server(socket_type tcpsocket, socket_type udpsocket)
     : tcpsocket_(tcpsocket), udpsocket_(udpsocket)
 {
 #ifdef _WIN32
@@ -942,7 +942,7 @@ bool group::remove_user(const user& usr){
 
 /*///////////////////////// client_endpoint /////////////////////////////*/
 
-client_endpoint::client_endpoint(server &s, int sock, const ip_address &addr)
+client_endpoint::client_endpoint(server &s, socket_type sock, const ip_address &addr)
     : server_(&s), socket(sock), addr_(addr)
 {
     int val = 0;

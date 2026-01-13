@@ -4950,7 +4950,9 @@ String SystemClipboard::getTextFromClipboard()
 
     if (OpenClipboard (nullptr) != 0)
     {
-        if (auto bufH = GetClipboardData (CF_UNICODETEXT))
+        HGLOBAL bufH = GetClipboardData (CF_UNICODETEXT);
+
+        if (bufH != nullptr)
         {
             if (auto* data = (const WCHAR*) GlobalLock (bufH))
             {

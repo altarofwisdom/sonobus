@@ -18,7 +18,10 @@
 
 #include "mtdm.h"
 
+#include <atomic>
 #include <algorithm>
+#include <cstdio>
+#include <string>
 
 #include "LatencyMeasurer.h"
 #include "Metronome.h"
@@ -29,6 +32,7 @@ using namespace SonoAudio;
 #define NOMINMAX
 #include <WinSock2.h>
 #include <WS2tcpip.h>
+#include <windows.h>
 typedef int socklen_t;
 #else
 #include <sys/types.h>
@@ -36,6 +40,7 @@ typedef int socklen_t;
 #include <arpa/inet.h>
 #include <netdb.h>
 #endif
+
 
 #define MAX_DELAY_SAMPLES 192000
 #define SENDBUFSIZE_SCALAR 2.0f
@@ -112,6 +117,7 @@ static String lastWindowWidthKey("lastWindowWidth");
 static String lastWindowHeightKey("lastWindowHeight");
 static String autoresizeDropRateThreshKey("autoDropRateThreshNew");
 static String reconnectServerLossKey("reconnServLoss");
+static String ipStackPreferenceKey("ipStackPref");
 
 static String compressorStateKey("CompressorState");
 static String expanderStateKey("ExpanderState");
@@ -195,38 +201,43 @@ static addrinfo* getAddressInfo (bool isDatagram, const String& hostName, int po
 
 struct SonobusAudioProcessor::EndpointState {
     EndpointState(String ipaddr_="", int port_=0) : ipaddr(ipaddr_), port(port_) {
-        rawaddr.sa_family = AF_UNSPEC;
+        memset(&rawaddr, 0, sizeof(rawaddr));
+        rawaddr.ss_family = AF_UNSPEC;
     }
-    
+
 
     DatagramSocket *owner;
-    //struct sockaddr_storage addr;
-    //socklen_t addrlen;
     std::unique_ptr<DatagramSocket::RemoteAddrInfo> peer;
     String ipaddr;
     int port = 0;
-    
-    
+
+
     struct sockaddr * getRawAddr() {
-        if (rawaddr.sa_family == AF_UNSPEC) {
+        if (rawaddr.ss_family == AF_UNSPEC) {
             struct addrinfo * info = getAddressInfo(true, ipaddr, port);
             if (info) {
                 memcpy(&rawaddr, info->ai_addr, info->ai_addrlen);
-
                 freeaddrinfo(info);
             }
         }
-        return &rawaddr;
+        return (struct sockaddr *)&rawaddr;
     }
-    
-    
+
+    socklen_t getRawAddrLen() const {
+        if (rawaddr.ss_family == AF_INET6) {
+            return sizeof(struct sockaddr_in6);
+        }
+        return sizeof(struct sockaddr_in);
+    }
+
+
     // runtime state
     int64_t sentBytes = 0;
     int64_t recvBytes = 0;
-    
+
 private:
-    struct sockaddr rawaddr;
-    
+    struct sockaddr_storage rawaddr;
+
 };
 
 
@@ -397,15 +408,60 @@ static int32_t client_send(void *e, const char *data, int32_t size, void *raddr)
     int result = -1;
 
     const struct sockaddr *addr = (struct sockaddr *)raddr;
-    
-    if (addr->sa_family == AF_INET){
-        result = (int) ::sendto(endpoint->owner->getRawSocketHandle(), data, (size_t)size, 0, addr, sizeof(struct sockaddr_in));
+#ifdef _WIN32
+    using socket_type = SOCKET;
+#else
+    using socket_type = int;
+#endif
+    int raw = endpoint->owner ? endpoint->owner->getRawSocketHandle() : -1;
+#ifdef _WIN32
+    const socket_type socketHandle = (raw == -1) ? (socket_type)-1 : (socket_type)(unsigned int)raw;
+#else
+    const socket_type socketHandle = (socket_type)raw;
+#endif
+
+    bool socketIsIPv6 = false;
+    if (socketHandle != (socket_type)-1) {
+        int optval = 0;
+        socklen_t optlen = sizeof(optval);
+        socketIsIPv6 = (getsockopt(socketHandle, IPPROTO_IPV6, IPV6_V6ONLY,
+                                   (char*)&optval, &optlen) == 0);
     }
-    
+
+    if (addr->sa_family == AF_INET){
+        static std::atomic<int> v4LogCount{0};
+        if (v4LogCount.fetch_add(1) < 10) {
+        }
+        if (socketIsIPv6) {
+            const auto *addr4 = reinterpret_cast<const struct sockaddr_in *>(addr);
+            struct sockaddr_in6 addr6;
+            memset(&addr6, 0, sizeof(addr6));
+            addr6.sin6_family = AF_INET6;
+            addr6.sin6_port = addr4->sin_port;
+            addr6.sin6_addr.s6_addr[10] = 0xff;
+            addr6.sin6_addr.s6_addr[11] = 0xff;
+            memcpy(&addr6.sin6_addr.s6_addr[12], &addr4->sin_addr, 4);
+            result = (int) ::sendto(socketHandle, data, (size_t)size, 0,
+                                    reinterpret_cast<const struct sockaddr *>(&addr6),
+                                    sizeof(addr6));
+        } else {
+            result = (int) ::sendto(socketHandle, data, (size_t)size, 0, addr, sizeof(struct sockaddr_in));
+        }
+    } else if (addr->sa_family == AF_INET6) {
+        static std::atomic<int> v6LogCount{0};
+        if (v6LogCount.fetch_add(1) < 10) {
+        }
+        result = (int) ::sendto(socketHandle, data, (size_t)size, 0, addr, sizeof(struct sockaddr_in6));
+    } else {
+        static std::atomic<int> otherLogCount{0};
+        if (otherLogCount.fetch_add(1) < 5) {
+        }
+    }
+
     if (result > 0) {
         endpoint->sentBytes += result + UDP_OVERHEAD_BYTES;
     }
-    
+
     return result;
 }
 
@@ -1001,12 +1057,15 @@ void SonobusAudioProcessor::initializeAoo(int udpPort)
         }
     }
 #endif
+    if (!mLocalIPAddress.isNull()) {
+    }
     
     mServerEndpoint = std::make_unique<EndpointState>();
     mServerEndpoint->owner = mUdpSocket.get();
     
     if (mUdpLocalPort > 0) {
         mAooClient.reset(aoo::net::iclient::create(mServerEndpoint.get(), client_send, mUdpLocalPort));
+    } else {
     }
 
     
@@ -1139,7 +1198,7 @@ bool SonobusAudioProcessor::connectToServer(const String & host, int port, const
 
     mCurrentUsername = username;
 
-    int32_t retval = mAooClient->connect(host.toRawUTF8(), port, username.toRawUTF8(), passwd.toRawUTF8());
+    int32_t retval = mAooClient->connect(host.toRawUTF8(), port, username.toRawUTF8(), passwd.toRawUTF8(), (int)mIPStackPreference);
     
     if (retval < 0) {
         DBG("Error connecting to server: " << retval);
@@ -2195,17 +2254,20 @@ foleys::LevelMeterSource * SonobusAudioProcessor::getRemotePeerSendMeterSource(i
 SonobusAudioProcessor::EndpointState * SonobusAudioProcessor::findOrAddRawEndpoint(void * rawaddr)
 {
     String ipaddr;
-    int port = 0 ;
+    int port = 0;
 
     char hostip[INET6_ADDRSTRLEN];
-    if (inet_ntop(AF_INET, get_in_addr((struct sockaddr *)rawaddr), hostip, sizeof(hostip)) == nullptr) {
+    struct sockaddr * sa = (struct sockaddr *)rawaddr;
+    int af = sa->sa_family;
+
+    if (inet_ntop(af, get_in_addr(sa), hostip, sizeof(hostip)) == nullptr) {
         DBG("Error converting raw addr to IP");
         return nullptr;
     } else {
         ipaddr = hostip;
-        port = ntohs(get_in_port((struct sockaddr *)rawaddr));        
-        return findOrAddEndpoint(ipaddr, port);    
-    }    
+        port = ntohs(get_in_port(sa));
+        return findOrAddEndpoint(ipaddr, port);
+    }
 }
 
 SonobusAudioProcessor::EndpointState * SonobusAudioProcessor::findOrAddEndpoint(const String & host, int port)
@@ -2371,6 +2433,9 @@ void SonobusAudioProcessor::doReceiveData()
                 //DBG("Got AOO_CLIENT or PEER data");
 
                 if (mAooClient) {
+                    static std::atomic<int> clientPacketLogCount{0};
+                    if (clientPacketLogCount.fetch_add(1) < 20) {
+                    }
                     mAooClient->handle_message(buf, nbytes, endpoint->getRawAddr());
                 }
                 
@@ -3246,6 +3311,9 @@ void SonobusAudioProcessor::doSendData()
         didsomething |= mAooDummySource->send();
         
         if (mAooClient) {
+            static std::atomic<int> clientSendLogCount{0};
+            if (clientSendLogCount.fetch_add(1) < 20) {
+            }
             mAooClient->send();
         }
         
@@ -4300,6 +4368,9 @@ int32_t SonobusAudioProcessor::handleClientEvents(const aoo_event ** events, int
         case AOONET_CLIENT_PEER_PREJOIN_EVENT:
         {
             aoonet_client_peer_event *e = (aoonet_client_peer_event *)events[i];
+            static std::atomic<int> peerPrejoinLogCount{0};
+            if (peerPrejoinLogCount.fetch_add(1) < 50) {
+            }
             
             if (e->result > 0){
                 DBG("Peer attempting to join group " <<  e->group << " - user " << e->user);
@@ -4315,6 +4386,9 @@ int32_t SonobusAudioProcessor::handleClientEvents(const aoo_event ** events, int
         case AOONET_CLIENT_PEER_JOIN_EVENT:
         {
             aoonet_client_peer_event *e = (aoonet_client_peer_event *)events[i];
+            static std::atomic<int> peerJoinLogCount{0};
+            if (peerJoinLogCount.fetch_add(1) < 50) {
+            }
 
             if (e->result > 0){
                 DBG("Peer joined group " <<  e->group << " - user " << e->user);
@@ -4354,6 +4428,9 @@ int32_t SonobusAudioProcessor::handleClientEvents(const aoo_event ** events, int
         case AOONET_CLIENT_PEER_JOINFAIL_EVENT:
         {
             aoonet_client_peer_event *e = (aoonet_client_peer_event *)events[i];
+            static std::atomic<int> peerJoinFailLogCount{0};
+            if (peerJoinFailLogCount.fetch_add(1) < 50) {
+            }
             
             if (e->result > 0){
                 DBG("Peer failed to join group " <<  e->group << " - user " << e->user);
@@ -4369,6 +4446,9 @@ int32_t SonobusAudioProcessor::handleClientEvents(const aoo_event ** events, int
         case AOONET_CLIENT_PEER_LEAVE_EVENT:
         {
             aoonet_client_peer_event *e = (aoonet_client_peer_event *)events[i];
+            static std::atomic<int> peerLeaveLogCount{0};
+            if (peerLeaveLogCount.fetch_add(1) < 50) {
+            }
 
             if (e->result > 0){
 
@@ -8512,6 +8592,7 @@ void SonobusAudioProcessor::getStateInformationWithOptions(MemoryBlock& destData
     // update state with our recents info
     extraTree.removeAllChildren(nullptr);
     extraTree.setProperty(useSpecificUdpPortKey, mUseSpecificUdpPort, nullptr);
+    extraTree.setProperty(ipStackPreferenceKey, var((int)mIPStackPreference), nullptr);
     extraTree.setProperty(changeQualForAllKey, mChangingDefaultAudioCodecChangesAll, nullptr);
     extraTree.setProperty(changeRecvQualForAllKey, mChangingDefaultRecvAudioCodecChangesAll, nullptr);
     extraTree.setProperty(defRecordOptionsKey, var((int)mDefaultRecordingOptions), nullptr);
@@ -8641,6 +8722,9 @@ void SonobusAudioProcessor::setStateInformationWithOptions (const void* data, in
         if (extraTree.isValid()) {
             int port = extraTree.getProperty(useSpecificUdpPortKey, mUseSpecificUdpPort);
             setUseSpecificUdpPort(port);
+
+            int ipStackPref = extraTree.getProperty(ipStackPreferenceKey, (int)mIPStackPreference);
+            setIPStackPreference((IPStackPreference)ipStackPref);
 
             bool chqual = extraTree.getProperty(changeQualForAllKey, mChangingDefaultAudioCodecChangesAll);
             setChangingDefaultAudioCodecSetsExisting(chqual);

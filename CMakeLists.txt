@@ -12,14 +12,14 @@ cmake_minimum_required(VERSION 3.15)
 if (WIN32)
     #set (CMAKE_GENERATOR_TOOLSET ClangCL)
     #static linking in Windows
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    #set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
 # If we are compiling for Mac OS we want to target OS versions down to 10.9
 option(UniversalBinary "Build universal binary for mac" ON)
 
 if (APPLE)
-    set (CMAKE_OSX_DEPLOYMENT_TARGET "10.10" CACHE INTERNAL "")
+    set (CMAKE_OSX_DEPLOYMENT_TARGET "10.15" CACHE INTERNAL "")
     if (UniversalBinary)
         set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE INTERNAL "")
         #set(CMAKE_OSX_ARCHITECTURES arm64 x86_64)        
@@ -617,6 +617,15 @@ function(sono_add_custom_plugin_target target_name product_name formats is_instr
             juce::juce_recommended_lto_flags
         #   juce::juce_recommended_warning_flags
         )
+
+    if (MSVC)
+        target_link_options("${target_name}" PRIVATE /NODEFAULTLIB:LIBCMT)
+        
+        # also apply to standalone if it exists
+        if (TARGET "${target_name}_Standalone")
+             target_link_options("${target_name}_Standalone" PRIVATE /NODEFAULTLIB:LIBCMT)
+        endif()
+    endif()
             
 endfunction()
 

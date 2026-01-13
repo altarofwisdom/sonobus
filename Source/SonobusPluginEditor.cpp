@@ -51,6 +51,7 @@ enum {
 using namespace SonoAudio;
 
 
+
 class SonobusAudioProcessorEditor::PatchMatrixView : public Component, public BeatToggleGridDelegate
 {
 public:
@@ -1112,8 +1113,8 @@ SonobusAudioProcessorEditor::SonobusAudioProcessorEditor (SonobusAudioProcessor&
         mPlaybackSlider->setMouseDragSensitivity(80);
         mPlaybackSlider->setTextBoxStyle(Slider::NoTextBox, true, 60, 14);
         mPlaybackSlider->setPopupDisplayEnabled(true, true, this);
-        mPlaybackSlider->valueFromTextFunction = [](const String& s) -> float { return Decibels::decibelsToGain(s.getFloatValue()); };
-        mPlaybackSlider->textFromValueFunction = [](float v) -> String { return Decibels::toString(Decibels::gainToDecibels(v), 1); };
+        mPlaybackSlider->valueFromTextFunction = [](const String& s) -> double { return Decibels::decibelsToGain(s.getFloatValue()); };
+        mPlaybackSlider->textFromValueFunction = [](double v) -> String { return Decibels::toString(Decibels::gainToDecibels((float)v), 1); };
         mPlaybackSlider->onValueChange = [this] { processor.setFilePlaybackGain(mPlaybackSlider->getValue()); };
         mPlaybackSlider->setWantsKeyboardFocus(true);
 
@@ -1586,21 +1587,21 @@ void SonobusAudioProcessorEditor::aooClientConnected(SonobusAudioProcessor *comp
     triggerAsyncUpdate();
 }
 
-void SonobusAudioProcessorEditor::aooClientDisconnected(SonobusAudioProcessor *comp, bool success, const String & errmesg) 
+void SonobusAudioProcessorEditor::aooClientDisconnected(SonobusAudioProcessor *comp, bool success, const String & errmesg)
 {
     DBG("Client disconnect success: " << (int) success <<  "  mesg: " << errmesg);
     {
-        const ScopedLock sl (clientStateLock);        
+        const ScopedLock sl (clientStateLock);
         clientEvents.add(ClientEvent(ClientEvent::DisconnectEvent, success, errmesg));
     }
     triggerAsyncUpdate();
 }
 
-void SonobusAudioProcessorEditor::aooClientLoginResult(SonobusAudioProcessor *comp, bool success, const String & errmesg)  
+void SonobusAudioProcessorEditor::aooClientLoginResult(SonobusAudioProcessor *comp, bool success, const String & errmesg)
 {
     DBG("Client login success: " << (int)success << "  mesg: " << errmesg);
     {
-        const ScopedLock sl (clientStateLock);        
+        const ScopedLock sl (clientStateLock);
         clientEvents.add(ClientEvent(ClientEvent::LoginEvent, success, errmesg));
     }
     triggerAsyncUpdate();
@@ -1699,14 +1700,13 @@ void SonobusAudioProcessorEditor::aooClientPeerLeft(SonobusAudioProcessor *comp,
 
 }
 
-void SonobusAudioProcessorEditor::aooClientError(SonobusAudioProcessor *comp, const String & errmesg)  
+void SonobusAudioProcessorEditor::aooClientError(SonobusAudioProcessor *comp, const String & errmesg)
 {
     DBG("Client error: " <<  errmesg);
     {
-        const ScopedLock sl (clientStateLock);        
+        const ScopedLock sl (clientStateLock);
         clientEvents.add(ClientEvent(ClientEvent::Error, errmesg));
     }
-    
     triggerAsyncUpdate();
 }
 
@@ -6040,4 +6040,3 @@ void SonobusAudioProcessorEditor::SonobusMenuBarModel::menuItemSelected (int men
     }
 #endif
 }
-
