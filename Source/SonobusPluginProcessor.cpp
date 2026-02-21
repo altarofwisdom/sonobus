@@ -1448,6 +1448,7 @@ bool SonobusAudioProcessor::setupCommonAooSource()
                                           pp->handleAooSourceEvent(event, level, aid);
                                       }, this, kAooEventModeCallback);
     
+    return true;
 }
 
 bool SonobusAudioProcessor::joinServerGroup(const String & group, const String & groupsecret, const String & username, const String & userpass, bool isPublic)
