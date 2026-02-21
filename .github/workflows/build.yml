@@ -40,6 +40,8 @@ jobs:
           git config --global core.longpaths true
           if (Test-Path asiosdk) { Remove-Item -Recurse -Force asiosdk }
           git clone --depth 1 https://github.com/audiosdk/asio.git asiosdk
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
       - name: Configure CMake
