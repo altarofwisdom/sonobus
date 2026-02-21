@@ -2,8 +2,6 @@
 // Copyright (C) 2020 Jesse Chappell
 
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 #include "SonoDrawableButton.h"
 
 
@@ -14,6 +12,8 @@ SonoDrawableButton::SonoDrawableButton (const String& buttonName, ButtonStyle bu
 
 
 void SonoDrawableButton::setBackgroundImage(const Drawable * img)
+using juce::Rectangle;
+using juce::RectanglePlacement;
 {
     if (img) {
         bgImage = img->createCopy();

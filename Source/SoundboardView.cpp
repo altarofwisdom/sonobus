@@ -2,8 +2,6 @@
 // Copyright (C) 2020 Jesse Chappell
 
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 #include <sstream>
 
@@ -14,6 +12,8 @@ using juce::RectanglePlacement;
 
 SoundboardView::SoundboardView(SoundboardChannelProcessor* channelProcessor, File supportDir)
         : processor(std::make_unique<SoundboardProcessor>(channelProcessor, supportDir))
+using juce::Rectangle;
+using juce::RectanglePlacement;
 {
     setOpaque(true);
 

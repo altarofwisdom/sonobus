@@ -2,8 +2,6 @@
 // Copyright (C) 2021 Jesse Chappell
 
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 #include <JuceHeader.h>
 #include "SoundSampleButtonColourPicker.h"
@@ -14,6 +12,8 @@ using juce::RectanglePlacement;
 void SoundSampleButtonColourPicker::show(const Rectangle<int>& bounds)
 {
     auto defaultColour = selectedColour == nullptr
+using juce::Rectangle;
+using juce::RectanglePlacement;
             ? SoundboardButtonColors::DEFAULT_BUTTON_COLOUR
             : *selectedColour & 0xFFFFFF;
 

@@ -2,8 +2,6 @@
 // Copyright (C) 2020 Jesse Chappell
 
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 #include "SonobusPluginProcessor.h"
 #include "SonobusPluginEditor.h"
@@ -14,6 +12,8 @@ using juce::RectanglePlacement;
 #include "PeersContainerView.h"
 #include "WaveformTransportComponent.h"
 #include "RandomSentenceGenerator.h"
+using juce::Rectangle;
+using juce::RectanglePlacement;
 #include "SonoUtility.h"
 #include "SonobusTypes.h"
 #include "ChannelGroupsView.h"

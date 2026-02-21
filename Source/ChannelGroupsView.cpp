@@ -2,8 +2,6 @@
 // Copyright (C) 2020 Jesse Chappell
 
 #include "ChannelGroupsView.h"
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 
 
@@ -14,6 +12,8 @@ struct DestChannelListItemData : public GenericItemChooserItem::UserData
 public:
     DestChannelListItemData(const DestChannelListItemData & other) : startIndex(other.startIndex), count(other.count) {}
     DestChannelListItemData(int start, int cnt) : startIndex(start), count(cnt) {}
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
     int startIndex;
     int count;

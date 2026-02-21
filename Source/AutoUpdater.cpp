@@ -2,8 +2,6 @@
 // Copyright (C) 2020 Jesse Chappell
 
 /*
-using juce::Rectangle;
-using juce::RectanglePlacement;
   ==============================================================================
 
    This file is part of the JUCE library.
@@ -14,6 +12,8 @@ using juce::RectanglePlacement;
 
    By using JUCE, you agree to the terms of both the JUCE 5 End-User License
    Agreement and JUCE 5 Privacy Policy (both updated and effective as of the
+using juce::Rectangle;
+using juce::RectanglePlacement;
    27th April 2017).
 
    End User License Agreement: www.juce.com/juce-5-licence

@@ -2,8 +2,6 @@
 // Copyright (C) 2021 Jesse Chappell
 
 #include "OptionsView.h"
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 
 #if JUCE_ANDROID
@@ -14,6 +12,8 @@ using juce::RectanglePlacement;
 
 using namespace SonoAudio;
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 class SonobusOptionsTabbedComponent : public TabbedComponent
 {
 public:

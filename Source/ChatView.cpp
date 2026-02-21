@@ -2,8 +2,6 @@
 // Copyright (C) 2020 Jesse Chappell
 
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 #include "ChatView.h"
 #include "GenericItemChooser.h"
@@ -14,6 +12,8 @@ void FocusTextEditor::focusGained (FocusChangeType gtype)
     TextEditor::focusGained(gtype);
 
     if (onFocusGained != nullptr) {
+using juce::Rectangle;
+using juce::RectanglePlacement;
         onFocusGained(gtype);
     }
 }

@@ -2,8 +2,6 @@
 // Copyright (C) 2020 Jesse Chappell
 
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 #include "SonoLookAndFeel.h"
 
 #include "SonoDrawableButton.h"
@@ -14,6 +12,8 @@ using juce::RectanglePlacement;
 SonoLookAndFeel::SonoLookAndFeel()
 {
     // setColour (mainBackgroundColourId, Colour::greyLevel (0.8f));
+using juce::Rectangle;
+using juce::RectanglePlacement;
     //DBG("Sonolook and feel");
     
     setUsingNativeAlertWindows(true);
