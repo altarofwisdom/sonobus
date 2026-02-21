@@ -7,6 +7,11 @@
 
 #include "JuceHeader.h"
 
+#ifdef JUCE_WINDOWS
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
+
 #include "aoo/aoo.h"
 #include "aoo/aoo_client.hpp"
 #include "aoo/aoo_server.hpp"
