@@ -4,9 +4,11 @@
 #include "PeersContainerView.h"
 
 #include "JitterBufferMeter.h"
+#include <set>
+
 using juce::Rectangle;
 using juce::RectanglePlacement;
-#include <set>
+
 
 using namespace SonoAudio;
 

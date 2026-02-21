@@ -7,6 +7,8 @@
 using juce::Rectangle;
 using juce::RectanglePlacement;
 
+
+
 enum {
     nameTextColourId = 0x1002830,
     currentNameTextColourId = 0x1002850,

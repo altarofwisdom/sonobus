@@ -4,11 +4,13 @@
 
 #include "SonoLookAndFeel.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 #include "SonoDrawableButton.h"
 //#include "ConfigurationRowView.h"
 #include "SonoTextButton.h"
+
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 
 //==============================================================================
 SonoLookAndFeel::SonoLookAndFeel()

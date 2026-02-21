@@ -2,10 +2,11 @@
 // Copyright (C) 2020 Jesse Chappell
 
 /*
-  ==============================================================================
 
 using juce::Rectangle;
 using juce::RectanglePlacement;
+  ==============================================================================
+
    This file is part of the JUCE library.
    Copyright (c) 2017 - ROLI Ltd.
 
@@ -34,6 +35,7 @@ using juce::RectanglePlacement;
 #include "JuceHeader.h"
 //#include "jucer_Application.h"
 #include "AutoUpdater.h"
+
 
 
 //==============================================================================

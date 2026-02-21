@@ -4,9 +4,11 @@
 
 
 #include "ChatView.h"
+#include "GenericItemChooser.h"
+
 using juce::Rectangle;
 using juce::RectanglePlacement;
-#include "GenericItemChooser.h"
+
 
 
 void FocusTextEditor::focusGained (FocusChangeType gtype)

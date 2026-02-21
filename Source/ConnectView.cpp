@@ -4,9 +4,11 @@
 #include "ConnectView.h"
 #include "SonoUtility.h"
 
+#include "RandomSentenceGenerator.h"
+
 using juce::Rectangle;
 using juce::RectanglePlacement;
-#include "RandomSentenceGenerator.h"
+
 
 
 using namespace SonoAudio;

@@ -4,13 +4,15 @@
 
 
 #include <sstream>
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 #include "SoundboardView.h"
 
 #include "SoundboardEditView.h"
 #include "SampleEditView.h"
+
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 
 SoundboardView::SoundboardView(SoundboardChannelProcessor* channelProcessor, File supportDir)
         : processor(std::make_unique<SoundboardProcessor>(channelProcessor, supportDir))

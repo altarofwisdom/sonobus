@@ -4,12 +4,14 @@
 
 
 #include <JuceHeader.h>
-using juce::Rectangle;
-using juce::RectanglePlacement;
 #include "SoundSampleButtonColourPicker.h"
 
 #include "SonoPlaybackProgressButton.h"
 #include "SonoTextButton.h"
+
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 
 void SoundSampleButtonColourPicker::show(const Rectangle<int>& bounds)
 {
