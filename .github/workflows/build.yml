@@ -1,0 +1,77 @@
+name: Build All Platforms
+
+on:
+  push:
+    branches: [ main, aoofreshest ]
+  pull_request:
+    branches: [ main, aoofreshest ]
+
+jobs:
+  build-mac:
+    name: Build macOS
+    runs-on: [self-hosted, macOS]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Configure CMake
+        run: |
+          rm -rf build
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --target SonoBus_Standalone --parallel 4
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonoBus-macOS
+          path: build/SonoBus_artefacts/Release/Standalone/SonoBus.app
+
+  build-win:
+    name: Build Windows
+    runs-on: [self-hosted, Windows]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Checkout ASIO SDK
+        run: |
+          if (Test-Path ../asiosdk) { Remove-Item -Recurse -Force ../asiosdk }
+          git clone --depth 1 https://github.com/audiosdk/asio.git ../asiosdk
+      - name: Configure CMake
+        run: |
+          if (Test-Path build) { Remove-Item -Recurse -Force build }
+          cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --target SonoBus_Standalone --parallel 4
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonoBus-Windows
+          path: build/SonoBus_artefacts/Release/Standalone/SonoBus.exe
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Dependencies
+        run: |
+          sudo apt update
+          sudo apt -y install build-essential cmake libjack-jackd2-dev 
+            libopus-dev opus-tools libasound2-dev libx11-dev libxext-dev 
+            libxinerama-dev libxrandr-dev libxcursor-dev libfreetype6-dev 
+            libcurl4-openssl-dev xvfb
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: xvfb-run cmake --build build --config Release --target SonoBus_Standalone --parallel 4
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonoBus-Linux
+          path: build/SonoBus_artefacts/Release/Standalone/sonobus
