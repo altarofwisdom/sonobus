@@ -251,6 +251,8 @@ function(sono_add_custom_plugin_target target_name product_name formats is_instr
             _WINSOCK_DEPRECATED_NO_WARNINGS
             WINVER=0x0601
             _WIN32_WINNT=0x0601)
+        
+        target_compile_options("${target_name}" PRIVATE /W0)
     else()
         # Linux
         list (APPEND PlatSourceFiles  Source/CrossPlatformUtilsLinux.cpp)
