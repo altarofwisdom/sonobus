@@ -2,6 +2,9 @@
 // Copyright (C) 2020 Jesse Chappell
 
 #include "PeersContainerView.h"
+
+using juce::Rectangle;
+using juce::RectanglePlacement;
 #include "JitterBufferMeter.h"
 #include <set>
 

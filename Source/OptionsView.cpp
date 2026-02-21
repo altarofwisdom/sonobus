@@ -3,6 +3,9 @@
 
 #include "OptionsView.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 #if JUCE_ANDROID
 #include "juce_core/native/juce_BasicNativeHeaders.h"
 #include "juce_core/juce_core.h"

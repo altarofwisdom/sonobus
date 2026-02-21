@@ -6,6 +6,9 @@
 #include <sstream>
 
 #include "SoundboardView.h"
+
+using juce::Rectangle;
+using juce::RectanglePlacement;
 #include "SoundboardEditView.h"
 #include "SampleEditView.h"
 

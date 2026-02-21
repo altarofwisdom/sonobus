@@ -33,6 +33,9 @@
 //#include "jucer_Application.h"
 #include "AutoUpdater.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 //==============================================================================
 LatestVersionCheckerAndUpdater::LatestVersionCheckerAndUpdater()
     : Thread ("VersionChecker")

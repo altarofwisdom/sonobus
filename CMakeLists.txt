@@ -246,6 +246,8 @@ function(sono_add_custom_plugin_target target_name product_name formats is_instr
 
         list (APPEND PLAT_COMPILE_DEFS
             _USE_MATH_DEFINES
+            NOMINMAX
+            WIN32_LEAN_AND_MEAN
             WINVER=0x0601
             _WIN32_WINNT=0x0601)
     else()

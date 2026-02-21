@@ -5,6 +5,9 @@
 
 #include "JitterBufferMeter.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 JitterBufferMeter::JitterBufferMeter()
 {
     jitterColor = Colour::fromHSV(0.9f, 0.15f, 0.3f, 1.0f); //Colour::fromHSV(0.9f, 0.3f, 0.4f, 1.0f);

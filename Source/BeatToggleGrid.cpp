@@ -4,6 +4,9 @@
 
 #include "BeatToggleGrid.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 //#include "DebugLogC.h"
 
 BeatToggleGrid::BeatToggleGrid()

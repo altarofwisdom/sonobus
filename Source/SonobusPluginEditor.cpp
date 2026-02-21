@@ -6,6 +6,9 @@
 #include "SonobusPluginProcessor.h"
 #include "SonobusPluginEditor.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 #include "BeatToggleGrid.h"
 
 #include "PeersContainerView.h"
