@@ -3,9 +3,7 @@
 
 /*
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-  ==============================================================================
+==============================================================================
 
    This file is part of the JUCE library.
    Copyright (c) 2017 - ROLI Ltd.
@@ -201,7 +199,7 @@ public:
 
         if (appIcon != nullptr)
             appIcon->drawWithin (g, appIconBounds.toFloat(),
-                                  RectanglePlacement::stretchToFit, 1.0f);
+                                  juce::RectanglePlacement::stretchToFit, 1.0f);
     }
 
     static std::unique_ptr<DialogWindow> launchDialog (const String& newVersionString,
@@ -246,7 +244,7 @@ private:
     TextButton chooseButton { TRANS("Download Installer") }, cancelButton { TRANS("Cancel") };
     ToggleButton dontAskAgainButton { "Don't ask again" };
     std::unique_ptr<Drawable> appIcon;
-    Rectangle<int> appIconBounds { 10, 10, 64, 64 };
+    juce::Rectangle<int> appIconBounds { 10, 10, 64, 64 };
 
     DialogWindow* parentWindow = nullptr;
 };

@@ -7,10 +7,6 @@
 
 #include <utility>
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
 SonoPlaybackProgressButton::SonoPlaybackProgressButton() : TextButton()
 {
     initStuff();
@@ -93,7 +89,7 @@ void SonoPlaybackProgressButton::paintButton(Graphics& graphics,
             graphics.setColour(colour);
             graphics.fillRoundedRectangle(imgbounds, 6.0f);
         }
-        editImage->drawWithin(graphics, imgbounds, RectanglePlacement(RectanglePlacement::centred), 0.6f);
+        editImage->drawWithin(graphics, imgbounds, juce::RectanglePlacement(juce::RectanglePlacement::centred), 0.6f);
     }
 }
 

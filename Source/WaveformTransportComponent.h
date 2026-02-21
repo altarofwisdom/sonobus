@@ -604,7 +604,7 @@ private:
                 setRange (visibleRange.movedToStartAt (newRangeStart));
     }
 
-    void showPopupMenu (Rectangle<int> bounds) {
+    void showPopupMenu (juce::Rectangle<int> bounds) {
         auto menu = PopupMenu();
         menu.addCommandItem(&commandManager, SonobusCommands::TrimSelectionToNewFile);
         menu.addCommandItem(&commandManager, SonobusCommands::ShareFile);
@@ -656,7 +656,7 @@ private:
     {
         //currentPositionMarker.setVisible (transportSource.isPlaying() || isMouseButtonDown());
 
-        currentPositionMarker.setRectangle (Rectangle<float> (timeToX (transportSource.getCurrentPosition()) - 0.75f, 0,
+        currentPositionMarker.setRectangle (juce::Rectangle<float> (timeToX (transportSource.getCurrentPosition()) - 0.75f, 0,
                                                               1.5f, (float) (getHeight() - (zoomFactor > 0 ? 0 /*scrollbar.getHeight() */ : 0))));
 
     }
@@ -675,7 +675,7 @@ private:
             //double endpos = startpos +  totsec * (llen / (double)tot);
             
             float xpos = timeToX(selRangeStart);
-            currentLoopRect.setRectangle (Rectangle<float> (xpos , 1.0f,
+            currentLoopRect.setRectangle (juce::Rectangle<float> (xpos , 1.0f,
                                                             timeToX(selRangeEnd) - xpos, (float) (getHeight() - (zoomFactor > 0 ? 0 /*scrollbar.getHeight()*/ : 0)) - 2.0f));
 
             //selRangeStart = startpos;

@@ -4,11 +4,6 @@
 
 #include "SonoChoiceButton.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
-
 SonoChoiceButton::SonoChoiceButton()
 {
     textLabel = std::make_unique<Label>();
@@ -141,7 +136,7 @@ void SonoChoiceButton::paint(Graphics & g)
     SonoTextButton::paint(g);
     
     if (showArrow) {
-        Rectangle<int> arrowZone (width - 20, 0, 16, height);
+        juce::Rectangle<int> arrowZone (width - 20, 0, 16, height);
         Path path;
         path.startNewSubPath (arrowZone.getX() + 3.0f, arrowZone.getCentreY() - 2.0f);
         path.lineTo (static_cast<float> (arrowZone.getCentreX()), arrowZone.getCentreY() + 3.0f);
@@ -154,8 +149,8 @@ void SonoChoiceButton::paint(Graphics & g)
     if (selIndex < items.size()) {
         if (items[selIndex].image.isValid()) {
             float imagesize = height - 8;
-            //g.drawImage(items[selIndex].image, Rectangle<float>(2, 4, imagesize, imagesize));
-            g.drawImageWithin(items[selIndex].image, 2, 4, imagesize, imagesize, RectanglePlacement(RectanglePlacement::centred|RectanglePlacement::onlyReduceInSize));
+            //g.drawImage(items[selIndex].image, juce::Rectangle<float>(2, 4, imagesize, imagesize));
+            g.drawImageWithin(items[selIndex].image, 2, 4, imagesize, imagesize, juce::RectanglePlacement(juce::RectanglePlacement::centred|juce::RectanglePlacement::onlyReduceInSize));
 
         }
     }
@@ -192,7 +187,7 @@ void SonoChoiceButton::showPopup()
     chooser->setSize(jmin(chooser->getWidth(), dw->getWidth() - 16), jmin(chooser->getHeight(), dw->getHeight() - 20));
 
 
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, getScreenBounds());
 
 
     CallOutBox & box = CallOutBox::launchAsynchronously (std::move(chooser), bounds , dw);

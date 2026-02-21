@@ -4,11 +4,6 @@
 
 #include "BeatToggleGrid.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
-
 //#include "DebugLogC.h"
 
 BeatToggleGrid::BeatToggleGrid()
@@ -368,11 +363,11 @@ void BeatToggleGrid::refreshSizes()
             BeatPad * pad = (BeatPad*) gridLabels.getUnchecked(i);
             
             // set the frames
-            Rectangle<int> padFrame = Rectangle<int>((i-firstItem)*(minrowwidth+rowgap) + rowgap + xstart , yoffset, minrowwidth, rowheight);
+            juce::Rectangle<int> padFrame = juce::Rectangle<int>((i-firstItem)*(minrowwidth+rowgap) + rowgap + xstart , yoffset, minrowwidth, rowheight);
             pad->setBounds(padFrame);
-            pad->rect->setRectangle(Rectangle<float>(5, 5, padFrame.getWidth() - 10, padFrame.getHeight()-10));
-            pad->label->setBounds(Rectangle<int>(0, 0, padFrame.getWidth(), padFrame.getHeight()));
-            pad->bgrect->setRectangle(Rectangle<float>(0, 0, padFrame.getWidth(), padFrame.getHeight()));
+            pad->rect->setRectangle(juce::Rectangle<float>(5, 5, padFrame.getWidth() - 10, padFrame.getHeight()-10));
+            pad->label->setBounds(juce::Rectangle<int>(0, 0, padFrame.getWidth(), padFrame.getHeight()));
+            pad->bgrect->setRectangle(juce::Rectangle<float>(0, 0, padFrame.getWidth(), padFrame.getHeight()));
             pad->setVisible(true);
             
             float fontsize = rintf(std::min(std::max(18.0f, (float)padFrame.getHeight() * 0.8f), 52.0f));
@@ -428,7 +423,7 @@ void BeatToggleGrid::refreshGrid(bool reset)
         while (gridLabels.size() < items) {
             
             //CGRect labelFrame = CGRectMake(5, i*(rowheight+rowgap) + rowgap + yoffset , width-10, rowheight);
-            Rectangle<int> labelFrame = Rectangle<int>(i*(rowwidth+rowgap) + rowgap + xoffset , 5, rowwidth, rowheight);
+            juce::Rectangle<int> labelFrame = juce::Rectangle<int>(i*(rowwidth+rowgap) + rowgap + xoffset , 5, rowwidth, rowheight);
             if (landscape) {
                 //labelFrame = CGRectMake(i*(rowheight+rowgap) + rowgap + yoffset , 5, rowheight, height-10);
                 //labelFrame = CGRectMake(i*(rowheight+rowgap) - (int)(rowheight/2) + yoffset, (int)(rowheight/2) + 5, height - 10, rowheight);
@@ -438,7 +433,7 @@ void BeatToggleGrid::refreshGrid(bool reset)
             pad->setBounds(labelFrame);
 
             DrawableRectangle * bgiv = new DrawableRectangle();
-            bgiv->setRectangle(Rectangle<float>(0, 0, pad->getWidth(), pad->getHeight()));
+            bgiv->setRectangle(juce::Rectangle<float>(0, 0, pad->getWidth(), pad->getHeight()));
             bgiv->setCornerSize(Point<float>(12.0f, 12.0f));
             bgiv->setFill(FillType(offColor));
             pad->addAndMakeVisible(bgiv);
@@ -446,7 +441,7 @@ void BeatToggleGrid::refreshGrid(bool reset)
             bgiv->setInterceptsMouseClicks(false, false);
 
             DrawableRectangle * iv = new DrawableRectangle();
-            iv->setRectangle(Rectangle<float>(5, 0, pad->getWidth() - 10, pad->getHeight()-20));
+            iv->setRectangle(juce::Rectangle<float>(5, 0, pad->getWidth() - 10, pad->getHeight()-20));
             iv->setCornerSize(Point<float>(12.0f, 12.0f));
             pad->addAndMakeVisible(iv);
             pad->rect.reset(iv);
@@ -457,7 +452,7 @@ void BeatToggleGrid::refreshGrid(bool reset)
             float fontsize = rintf(std::min(std::max(18.0f, (float)labelFrame.getHeight() * 0.8f), 52.0f));
             
             Label *label = new Label();
-            label->setBounds(Rectangle<int>(0, 0, labelFrame.getWidth(), pad->getHeight()));
+            label->setBounds(juce::Rectangle<int>(0, 0, labelFrame.getWidth(), pad->getHeight()));
             label->setText(String::formatted("%d", i+1), dontSendNotification);
             label->setColour(Label::textColourId, Colours::white);
             label->setJustificationType(Justification::centred);

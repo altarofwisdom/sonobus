@@ -4,11 +4,6 @@
 
 #include "GenericItemChooser.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
-
 enum {
     nameTextColourId = 0x1002830,
     currentNameTextColourId = 0x1002850,
@@ -18,7 +13,7 @@ enum {
 };
 
 
-CallOutBox& GenericItemChooser::launchPopupChooser(const Array<GenericItemChooserItem> & items, Rectangle<int> targetBounds, Component * targetComponent, GenericItemChooser::Listener * listener, int tag, int selectedIndex, int maxheight, bool dismissSel)
+CallOutBox& GenericItemChooser::launchPopupChooser(const Array<GenericItemChooserItem> & items, juce::Rectangle<int> targetBounds, Component * targetComponent, GenericItemChooser::Listener * listener, int tag, int selectedIndex, int maxheight, bool dismissSel)
 {
     
     auto chooser = std::make_unique<GenericItemChooser>(items, tag);
@@ -268,7 +263,7 @@ void GenericItemChooser::paintListBoxItem (int rowNumber, Graphics &g, int width
 
     if (rowIsSelected && !items[rowNumber].disabled) {
         g.setColour (findColour(selectedColourId));
-        g.fillRect(Rectangle<int>(0,0,width,height));
+        g.fillRect(juce::Rectangle<int>(0,0,width,height));
     }
     
     if (items[rowNumber].disabled) {
@@ -290,8 +285,8 @@ void GenericItemChooser::paintListBoxItem (int rowNumber, Graphics &g, int width
     if (rowNumber < items.size()) {
         if (items[rowNumber].image.isValid()) {
             imagewidth = height-8;
-            //g.drawImage(items[rowNumber].image, Rectangle<float>(2, 2, imagewidth, height - 4));
-            g.drawImageWithin(items[rowNumber].image, 2, 4, imagewidth, imagewidth, RectanglePlacement(RectanglePlacement::centred|RectanglePlacement::onlyReduceInSize));
+            //g.drawImage(items[rowNumber].image, juce::Rectangle<float>(2, 2, imagewidth, height - 4));
+            g.drawImageWithin(items[rowNumber].image, 2, 4, imagewidth, imagewidth, juce::RectanglePlacement(juce::RectanglePlacement::centred|juce::RectanglePlacement::onlyReduceInSize));
 
             
         }
@@ -303,13 +298,13 @@ void GenericItemChooser::paintListBoxItem (int rowNumber, Graphics &g, int width
     int imagewidth = height * 0.75;
     
     if (rowNumber == 0) {
-        g.drawImageWithin(wheelImage, 2, 2, imagewidth, height - 4, RectanglePlacement::centred|RectanglePlacement::onlyReduceInSize);
+        g.drawImageWithin(wheelImage, 2, 2, imagewidth, height - 4, juce::RectanglePlacement::centred|juce::RectanglePlacement::onlyReduceInSize);
     }
     else if (rowNumber == 1) {
-        g.drawImageWithin(stringImage, 2, 2, imagewidth, height - 4, RectanglePlacement::centred|RectanglePlacement::onlyReduceInSize);
+        g.drawImageWithin(stringImage, 2, 2, imagewidth, height - 4, juce::RectanglePlacement::centred|juce::RectanglePlacement::onlyReduceInSize);
     }
     else {
-        g.drawImageWithin(keyboardImage, 2, 2, imagewidth, height - 4, RectanglePlacement::centred|RectanglePlacement::onlyReduceInSize);
+        g.drawImageWithin(keyboardImage, 2, 2, imagewidth, height - 4, juce::RectanglePlacement::centred|juce::RectanglePlacement::onlyReduceInSize);
     }
     */
         

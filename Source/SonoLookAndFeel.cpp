@@ -8,10 +8,6 @@
 //#include "ConfigurationRowView.h"
 #include "SonoTextButton.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
 //==============================================================================
 SonoLookAndFeel::SonoLookAndFeel()
 {
@@ -256,9 +252,9 @@ static Colour getTabBackgroundColour (TabBarButton& button)
     return bkg;
 }
 
-Rectangle<int> SonoLookAndFeel::getTabButtonExtraComponentBounds (const TabBarButton& button, Rectangle<int>& textArea, Component& comp)
+juce::Rectangle<int> SonoLookAndFeel::getTabButtonExtraComponentBounds (const TabBarButton& button, juce::Rectangle<int>& textArea, Component& comp)
 {
-    Rectangle<int> extraComp;
+    juce::Rectangle<int> extraComp;
     
     auto orientation = button.getTabbedButtonBar().getOrientation();
     
@@ -332,7 +328,7 @@ void SonoLookAndFeel::createTabTextLayout (const TabBarButton& button, float len
 
 void SonoLookAndFeel::drawTabButton (TabBarButton& button, Graphics& g, bool isMouseOver, bool isMouseDown)
 {
-    const Rectangle<int> activeArea (button.getActiveArea());
+    const juce::Rectangle<int> activeArea (button.getActiveArea());
     
     const TabbedButtonBar::Orientation o = button.getTabbedButtonBar().getOrientation();
     
@@ -367,7 +363,7 @@ void SonoLookAndFeel::drawTabButton (TabBarButton& button, Graphics& g, bool isM
         //                                   bkg.darker (0.5f),   (float) p2.x, (float) p2.y, false));
     }
 
-    Rectangle<int> p (activeArea.reduced(1));
+    juce::Rectangle<int> p (activeArea.reduced(1));
 
     g.fillRect (p);
 
@@ -376,7 +372,7 @@ void SonoLookAndFeel::drawTabButton (TabBarButton& button, Graphics& g, bool isM
 #if 0
     g.setColour (button.findColour (TabbedButtonBar::tabOutlineColourId));
     
-    Rectangle<int> r (activeArea);
+    juce::Rectangle<int> r (activeArea);
     
     if (o != TabbedButtonBar::TabsAtBottom)   g.fillRect (r.removeFromTop (1));
     if (o != TabbedButtonBar::TabsAtTop)      g.fillRect (r.removeFromBottom (1));
@@ -402,7 +398,7 @@ void SonoLookAndFeel::drawTabButton (TabBarButton& button, Graphics& g, bool isM
             col = findColour (colID);
     }
     
-    const Rectangle<float> area (button.getTextArea().reduced(1).toFloat());
+    const juce::Rectangle<float> area (button.getTextArea().reduced(1).toFloat());
     
     float length = area.getWidth();
     float depth  = area.getHeight();
@@ -425,14 +421,14 @@ void SonoLookAndFeel::drawTabButton (TabBarButton& button, Graphics& g, bool isM
     }
     
     g.addTransform (t);
-    textLayout.draw (g, Rectangle<float> (length, depth));
+    textLayout.draw (g, juce::Rectangle<float> (length, depth));
 
 }
 
 /*
 void SonoLookAndFeel::drawTabButton (TabBarButton& button, Graphics& g, bool isMouseOver, bool isMouseDown)
 {
-    const Rectangle<int> activeArea (button.getActiveArea());
+    const juce::Rectangle<int> activeArea (button.getActiveArea());
 
     const Colour bkg (getTabBackgroundColour (button));
 
@@ -459,7 +455,7 @@ void SonoLookAndFeel::drawTabAreaBehindFrontButton (TabbedButtonBar& bar, Graphi
 {
     const float shadowSize = 0.15f;
     
-    Rectangle<int> shadowRect, line;
+    juce::Rectangle<int> shadowRect, line;
     ColourGradient gradient (Colours::black.withAlpha (bar.isEnabled() ? 0.08f : 0.04f), 0, 0,
                              Colours::transparentBlack, 0, 0, false);
     
@@ -503,7 +499,7 @@ void SonoLookAndFeel::drawTabAreaBehindFrontButton (TabbedButtonBar& bar, Graphi
 
 void SonoLookAndFeel::drawTabButtonText (TabBarButton& button, Graphics& g, bool isMouseOver, bool isMouseDown)
 {
-    const Rectangle<float> area (button.getTextArea().toFloat());
+    const juce::Rectangle<float> area (button.getTextArea().toFloat());
     
     //DBG("Sono look and feel drawtabbutton text: " << button.getButtonText());
     
@@ -721,15 +717,15 @@ void SonoLookAndFeel::drawFileBrowserRow (Graphics& g, int width, int height,
         if (icon != nullptr && icon->isValid())
         {
             g.drawImageWithin (*icon, 2, 2, x - 4, height - 4,
-                               RectanglePlacement::centred | RectanglePlacement::onlyReduceInSize,
+                               juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize,
                                false);
         }
         else
         {
             if (const Drawable* d = isDirectory ? getDefaultFolderImage()
                 : getDefaultDocumentFileImage())
-                d->drawWithin (g, Rectangle<float> (2.0f, 2.0f, x - 4.0f, height - 4.0f),
-                               RectanglePlacement::centred | RectanglePlacement::onlyReduceInSize, 1.0f);
+                d->drawWithin (g, juce::Rectangle<float> (2.0f, 2.0f, x - 4.0f, height - 4.0f),
+                               juce::RectanglePlacement::centred | juce::RectanglePlacement::onlyReduceInSize, 1.0f);
         }
     }
     else {
@@ -845,7 +841,7 @@ PopupMenu::Options SonoLookAndFeel::getOptionsForComboBoxPopupMenu (ComboBox& bo
     return options;
 }
 
-void SonoLookAndFeel::drawTreeviewPlusMinusBox (Graphics& g, const Rectangle<float>& area,
+void SonoLookAndFeel::drawTreeviewPlusMinusBox (Graphics& g, const juce::Rectangle<float>& area,
                                                Colour backgroundColour, bool isOpen, bool isMouseOver)
 {
     Path p;
@@ -930,7 +926,7 @@ void SonoLookAndFeel::drawRotarySlider (Graphics& g, int x, int y, int width, in
     const auto outline = findColour (Slider::rotarySliderOutlineColourId);
     const auto fill    = findColour (Slider::rotarySliderFillColourId);
     
-    const auto bounds = Rectangle<int> (x, y, width, height).toFloat().reduced (3);
+    const auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (3);
     
     
     auto radius = jmin (bounds.getWidth(), bounds.getHeight()) / 2.0f;
@@ -980,7 +976,7 @@ void SonoLookAndFeel::drawRotarySlider (Graphics& g, int x, int y, int width, in
                                    bounds.getCentreY() + arcRadius * std::sin (toAngle - MathConstants<float>::pi * 0.5f));
     
     g.setColour (findColour (Slider::thumbColourId));
-    g.fillEllipse (Rectangle<float> (thumbWidth, thumbWidth).withCentre (thumbPoint));
+    g.fillEllipse (juce::Rectangle<float> (thumbWidth, thumbWidth).withCentre (thumbPoint));
 }
 
 //==============================================================================
@@ -1085,15 +1081,15 @@ void SonoLookAndFeel::drawLinearSlider (Graphics& g, int x, int y, int width, in
             if (!slider.getProperties().contains ("noFill")) {
                 g.setColour (slider.findColour (Slider::trackColourId));
 
-                g.fillRect (slider.isHorizontal() ? Rectangle<float> (sliderPos > centrex ? centrex : sliderPos, y + 0.5f, sliderPos > centrex ? sliderPos - centrex : centrex - sliderPos, height - 1.0f)
-                            : Rectangle<float> (x + 0.5f, sliderPos < centrey ? sliderPos : centrey, width - 1.0f, sliderPos < centrey ?  centrey - sliderPos : sliderPos - centrey));
+                g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (sliderPos > centrex ? centrex : sliderPos, y + 0.5f, sliderPos > centrex ? sliderPos - centrex : centrex - sliderPos, height - 1.0f)
+                            : juce::Rectangle<float> (x + 0.5f, sliderPos < centrey ? sliderPos : centrey, width - 1.0f, sliderPos < centrey ?  centrey - sliderPos : sliderPos - centrey));
             }
             
             // draw line
             g.setColour (slider.findColour (Slider::thumbColourId));
 
-            g.fillRect (slider.isHorizontal() ? Rectangle<float> (sliderPos - 1, y + 0.5f, 2, height - 1.0f)
-                        : Rectangle<float> (x + 0.5f, sliderPos - 1, width - 1.0f, 2));
+            g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (sliderPos - 1, y + 0.5f, 2, height - 1.0f)
+                        : juce::Rectangle<float> (x + 0.5f, sliderPos - 1, width - 1.0f, 2));
         }
         else {
             
@@ -1101,8 +1097,8 @@ void SonoLookAndFeel::drawLinearSlider (Graphics& g, int x, int y, int width, in
 
                 g.setColour (slider.findColour (Slider::trackColourId));
 
-                g.fillRect (slider.isHorizontal() ? Rectangle<float> (static_cast<float> (x), y + 0.5f, sliderPos - x, height - 1.0f)
-                            : Rectangle<float> (x + 0.5f, sliderPos, width - 1.0f, y + (height - sliderPos)));
+                g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (static_cast<float> (x), y + 0.5f, sliderPos - x, height - 1.0f)
+                            : juce::Rectangle<float> (x + 0.5f, sliderPos, width - 1.0f, y + (height - sliderPos)));
             }
             //else
 
@@ -1110,8 +1106,8 @@ void SonoLookAndFeel::drawLinearSlider (Graphics& g, int x, int y, int width, in
 
             {
                 // draw line
-                g.fillRect (slider.isHorizontal() ? Rectangle<float> (sliderPos - 1, y + 0.5f, 3, height - 1.0f)
-                            : Rectangle<float> (x + 0.5f, sliderPos - 1, width - 1.0f, 3));
+                g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (sliderPos - 1, y + 0.5f, 3, height - 1.0f)
+                            : juce::Rectangle<float> (x + 0.5f, sliderPos - 1, width - 1.0f, 3));
             }
         }
     }
@@ -1168,7 +1164,7 @@ void SonoLookAndFeel::drawLinearSlider (Graphics& g, int x, int y, int width, in
         if (! isTwoVal)
         {
             g.setColour (slider.findColour (Slider::thumbColourId));
-            g.fillEllipse (Rectangle<float> (static_cast<float> (thumbWidth), static_cast<float> (thumbWidth)).withCentre (isThreeVal ? thumbPoint : maxPoint));
+            g.fillEllipse (juce::Rectangle<float> (static_cast<float> (thumbWidth), static_cast<float> (thumbWidth)).withCentre (isThreeVal ? thumbPoint : maxPoint));
         }
         
         if (isTwoVal || isThreeVal)
@@ -1220,8 +1216,8 @@ void SonoLookAndFeel::drawDrawableButton (Graphics& g, DrawableButton& button,
     
     ;
 
-    //Rectangle<float> bounds = g.getClipBounds().toFloat();
-    Rectangle<float> bounds = button.getLocalBounds().toFloat();
+    //juce::Rectangle<float> bounds = g.getClipBounds().toFloat();
+    juce::Rectangle<float> bounds = button.getLocalBounds().toFloat();
 
     g.setColour(button.findColour (toggleState ? DrawableButton::backgroundOnColourId
                                    : DrawableButton::backgroundColourId));
@@ -1296,10 +1292,10 @@ void SonoLookAndFeel::drawDrawableButton (Graphics& g, DrawableButton& button,
 
 
 void SonoLookAndFeel::drawBubble (Graphics& g, BubbleComponent& comp,
-                                 const Point<float>& tip, const Rectangle<float>& body)
+                                 const Point<float>& tip, const juce::Rectangle<float>& body)
 {
     Path p;
-    p.addBubble (body.reduced (0.5f), body.getUnion (Rectangle<float> (tip.x, tip.y, 1.0f, 1.0f)),
+    p.addBubble (body.reduced (0.5f), body.getUnion (juce::Rectangle<float> (tip.x, tip.y, 1.0f, 1.0f)),
                  tip, 5.0f, jmin (10.0f, body.getWidth() * 0.2f, body.getHeight() * 0.2f));
     
     g.setColour (comp.findColour (BubbleComponent::backgroundColourId));
@@ -1453,24 +1449,24 @@ void SonoPanSliderLookAndFeel::drawLinearSlider (Graphics& g, int x, int y, int 
             auto centrey = y + height*0.5f;
             
             if (!slider.getProperties().contains ("noFill")) {
-                g.fillRect (slider.isHorizontal() ? Rectangle<float> (sliderPos > centrex ? centrex : sliderPos, y + 0.5f, sliderPos > centrex ? sliderPos - centrex : centrex - sliderPos, height - 1.0f)
-                            : Rectangle<float> (x + 0.5f, sliderPos < centrey ? sliderPos : centrey, width - 1.0f, sliderPos < centrey ?  centrey - sliderPos : sliderPos - centrey));
+                g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (sliderPos > centrex ? centrex : sliderPos, y + 0.5f, sliderPos > centrex ? sliderPos - centrex : centrex - sliderPos, height - 1.0f)
+                            : juce::Rectangle<float> (x + 0.5f, sliderPos < centrey ? sliderPos : centrey, width - 1.0f, sliderPos < centrey ?  centrey - sliderPos : sliderPos - centrey));
             }
             
             // draw line
-            g.fillRect (slider.isHorizontal() ? Rectangle<float> (sliderPos - 1, y + 0.5f, 2, height - 1.0f)
-                        : Rectangle<float> (x + 0.5f, sliderPos - 1, width - 1.0f, 2));
+            g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (sliderPos - 1, y + 0.5f, 2, height - 1.0f)
+                        : juce::Rectangle<float> (x + 0.5f, sliderPos - 1, width - 1.0f, 2));
         }
         else {
             
             if (!slider.getProperties().contains ("noFill")) {
-                g.fillRect (slider.isHorizontal() ? Rectangle<float> (static_cast<float> (x), y + 0.5f, sliderPos - x, height - 1.0f)
-                            : Rectangle<float> (x + 0.5f, sliderPos, width - 1.0f, y + (height - sliderPos)));
+                g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (static_cast<float> (x), y + 0.5f, sliderPos - x, height - 1.0f)
+                            : juce::Rectangle<float> (x + 0.5f, sliderPos, width - 1.0f, y + (height - sliderPos)));
             }
             else {
                 // draw line
-                g.fillRect (slider.isHorizontal() ? Rectangle<float> (sliderPos - 1, y + 0.5f, 3, height - 1.0f)
-                            : Rectangle<float> (x + 0.5f, sliderPos - 1, width - 1.0f, 3));
+                g.fillRect (slider.isHorizontal() ? juce::Rectangle<float> (sliderPos - 1, y + 0.5f, 3, height - 1.0f)
+                            : juce::Rectangle<float> (x + 0.5f, sliderPos - 1, width - 1.0f, 3));
             }
         }
     }
@@ -1544,7 +1540,7 @@ void SonoPanSliderLookAndFeel::drawLinearSlider (Graphics& g, int x, int y, int 
         if (! isTwoVal)
         {
            // g.setColour (slider.findColour (Slider::thumbColourId));
-           // g.fillEllipse (Rectangle<float> (static_cast<float> (thumbWidth), static_cast<float> (thumbWidth)).withCentre (isThreeVal ? thumbPoint : maxPoint));
+           // g.fillEllipse (juce::Rectangle<float> (static_cast<float> (thumbWidth), static_cast<float> (thumbWidth)).withCentre (isThreeVal ? thumbPoint : maxPoint));
 
             auto sr = jmin (trackWidth, (slider.isHorizontal() ? height : width) * 0.4f);
             auto pointerColour = slider.findColour (Slider::thumbColourId);

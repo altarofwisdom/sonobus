@@ -6,10 +6,6 @@
 #include "JitterBufferMeter.h"
 #include <set>
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
 using namespace SonoAudio;
 
 PeerViewInfo::PeerViewInfo() : smallLnf(12), medLnf(14), sonoSliderLNF(12), panSliderLNF(12)
@@ -100,12 +96,12 @@ void PeerViewInfo::resized()
         }
 
         if (isNarrow) {
-            auto rect = Rectangle<int>(recvOptionsButton->getX() +  3, recvOptionsButton->getBottom() - recvOptionsButton->getHeight()/2 - triheight + 2, triwidth, triheight);
-            recvButtonImage->setTransformToFit(rect.toFloat(), RectanglePlacement::stretchToFit);
+            auto rect = juce::Rectangle<int>(recvOptionsButton->getX() +  3, recvOptionsButton->getBottom() - recvOptionsButton->getHeight()/2 - triheight + 2, triwidth, triheight);
+            recvButtonImage->setTransformToFit(rect.toFloat(), juce::RectanglePlacement::stretchToFit);
         }
         else {
-            auto rect = Rectangle<int>(recvOptionsButton->getX() +  3, recvOptionsButton->getBottom() - triheight - 1, triwidth, triheight);
-            recvButtonImage->setTransformToFit(rect.toFloat(), RectanglePlacement::stretchToFit);
+            auto rect = juce::Rectangle<int>(recvOptionsButton->getX() +  3, recvOptionsButton->getBottom() - triheight - 1, triwidth, triheight);
+            recvButtonImage->setTransformToFit(rect.toFloat(), juce::RectanglePlacement::stretchToFit);
         }
     }
 
@@ -116,21 +112,21 @@ void PeerViewInfo::resized()
 
             sendOptionsButton->setBounds(staticSendQualLabel->getX(), staticSendQualLabel->getY(), rightedge - staticSendQualLabel->getX(), sendQualityLabel->getBottom() - staticSendQualLabel->getY());
 
-            auto rect = Rectangle<int>(sendOptionsButton->getX() + 3, sendOptionsButton->getBottom() - sendOptionsButton->getHeight()/2 - triheight + 2, triwidth, triheight);
-            sendButtonImage->setTransformToFit(rect.toFloat(), RectanglePlacement::stretchToFit);
+            auto rect = juce::Rectangle<int>(sendOptionsButton->getX() + 3, sendOptionsButton->getBottom() - sendOptionsButton->getHeight()/2 - triheight + 2, triwidth, triheight);
+            sendButtonImage->setTransformToFit(rect.toFloat(), juce::RectanglePlacement::stretchToFit);
         }
         else {
             rightedge = (sendActualBitrateLabel->getRight() + (recvActualBitrateLabel->getX() - sendActualBitrateLabel->getRight()) / 2) - 3;
 
             sendOptionsButton->setBounds(staticSendQualLabel->getX(), staticSendQualLabel->getY(), rightedge - staticSendQualLabel->getX(), sendActualBitrateLabel->getBottom() - staticSendQualLabel->getY());
 
-            auto rect = Rectangle<int>(sendOptionsButton->getX() + 3, sendOptionsButton->getBottom() - triheight - 1, triwidth, triheight);
-            sendButtonImage->setTransformToFit(rect.toFloat(), RectanglePlacement::stretchToFit);
+            auto rect = juce::Rectangle<int>(sendOptionsButton->getX() + 3, sendOptionsButton->getBottom() - triheight - 1, triwidth, triheight);
+            sendButtonImage->setTransformToFit(rect.toFloat(), juce::RectanglePlacement::stretchToFit);
         }
     }
 
 
-    //Rectangle<int> optbounds(staticSendQualLabel->getX(), staticSendQualLabel->getY(), sendQualityLabel->getRight() - staticSendQualLabel->getX(), bufferLabel->getBottom() - sendQualityLabel->getY());
+    //juce::Rectangle<int> optbounds(staticSendQualLabel->getX(), staticSendQualLabel->getY(), sendQualityLabel->getRight() - staticSendQualLabel->getX(), bufferLabel->getBottom() - sendQualityLabel->getY());
     //optionsButton->setBounds(optbounds);
     
     if (jitterBufferMeter) {
@@ -302,7 +298,7 @@ void PeersContainerView::configLabel(Label *label, int ltype)
 
 void PeersContainerView::resized()
 {
-    Rectangle<int> bounds = getLocalBounds().reduced(5, 0);
+    juce::Rectangle<int> bounds = getLocalBounds().reduced(5, 0);
     bounds.removeFromLeft(3);
 
     // if the width has changed, need to rebuild layout potentially
@@ -374,7 +370,7 @@ void PeersContainerView::showPopTip(const String & message, int timeoutMs, Compo
         popTip->showAt(target, text, timeoutMs);
     }
     else {
-        Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
+        juce::Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
         popTip->showAt(topbox, text, timeoutMs);
     }
     popTip->toFront(false);
@@ -389,7 +385,7 @@ void PeersContainerView::showPopTip(const String & message, int timeoutMs, Compo
 void PeersContainerView::paint(Graphics & g)
 {    
     //g.fillAll (Colours::black);
-    Rectangle<int> bounds = getLocalBounds();
+    juce::Rectangle<int> bounds = getLocalBounds();
 
     bounds.reduce(1, 1);
     bounds.removeFromLeft(3);
@@ -1407,7 +1403,7 @@ juce::Rectangle<int> PeersContainerView::getBoundsForPeer(int chgroup)
     // otherwise return a line after the last of them
     if (!mPeerViewBounds.isEmpty()) {
         auto lastone = mPeerViewBounds.getLast();
-        return Rectangle<int>(lastone.getX(), lastone.getBottom(), lastone.getWidth(), 0);
+        return juce::Rectangle<int>(lastone.getX(), lastone.getBottom(), lastone.getWidth(), 0);
     }
     return {};
 }
@@ -1568,9 +1564,9 @@ void PeersContainerView::mouseUp (const MouseEvent& event)
 
 
 
-Rectangle<int> PeersContainerView::getMinimumContentBounds() const
+juce::Rectangle<int> PeersContainerView::getMinimumContentBounds() const
 {
-    return Rectangle<int>(0,0,peersMinWidth, peersMinHeight);
+    return juce::Rectangle<int>(0,0,peersMinWidth, peersMinHeight);
 }
 
 void PeersContainerView::applyToAllSliders(std::function<void(Slider *)> & routine)
@@ -2105,7 +2101,7 @@ void PeersContainerView::showRecvOptions(int dindex, bool flag, Component * from
 
         pvf->addrClicked = false;
         
-        pvf->recvOptionsContainer->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        pvf->recvOptionsContainer->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
         
         wrap->setViewedComponent(pvf->recvOptionsContainer.get(), false);
         pvf->recvOptionsContainer->setVisible(true);
@@ -2115,7 +2111,7 @@ void PeersContainerView::showRecvOptions(int dindex, bool flag, Component * from
 
         updatePeerViews(dindex);
         
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView ? fromView->getScreenBounds() : pvf->recvOptionsButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView ? fromView->getScreenBounds() : pvf->recvOptionsButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         recvOptionsCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(recvOptionsCalloutBox.get())) {
@@ -2165,7 +2161,7 @@ void PeersContainerView::showSendOptions(int dindex, bool flag, Component * from
 
         auto * pvf = mPeerViews.getUnchecked(dindex);
         
-        pvf->sendOptionsContainer->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        pvf->sendOptionsContainer->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
         
         wrap->setViewedComponent(pvf->sendOptionsContainer.get(), false);
         pvf->sendOptionsContainer->setVisible(true);
@@ -2173,7 +2169,7 @@ void PeersContainerView::showSendOptions(int dindex, bool flag, Component * from
         pvf->sendOptionsBox.performLayout(pvf->sendOptionsContainer->getLocalBounds());
 
         
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView ? fromView->getScreenBounds() : pvf->sendOptionsButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView ? fromView->getScreenBounds() : pvf->sendOptionsButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         sendOptionsCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(sendOptionsCalloutBox.get())) {
@@ -2243,7 +2239,7 @@ void PeersContainerView::showPopupMenu(Component * source, int dindex)
         dw = source->findParentComponentOfClass<Component>();        
     }
     
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, source->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, source->getScreenBounds());
     
     GenericItemChooser::launchPopupChooser(items, bounds, dw, this, index+1);
 }

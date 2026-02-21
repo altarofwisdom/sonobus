@@ -23,9 +23,6 @@
 
 #include <sstream>
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
 #if JUCE_ANDROID
 #include "juce_core/native/juce_BasicNativeHeaders.h"
 #include "juce_core/juce_core.h"
@@ -126,7 +123,7 @@ public:
         repaint();
     }
     
-    Rectangle<int> getPreferredBounds() const
+    juce::Rectangle<int> getPreferredBounds() const
     {
         int count = processor.getNumberRemotePeers();
         int labwidth = 30;
@@ -134,7 +131,7 @@ public:
         int buttwidth = 60;
         int buttheight = 44;
 
-        Rectangle<int> prefsize;
+        juce::Rectangle<int> prefsize;
         prefsize.setX(0);
         prefsize.setY(0);
         prefsize.setWidth(count * buttwidth + labwidth);
@@ -2887,7 +2884,7 @@ void SonobusAudioProcessorEditor::showMetConfig(bool flag)
         wrap->setSize(jmin(defWidth, dw->getWidth() - 20), jmin(defHeight, dw->getHeight() - 24));
         
         
-        mMetContainer->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mMetContainer->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
         
         wrap->setViewedComponent(mMetContainer.get(), false);
         mMetContainer->setVisible(true);
@@ -2895,7 +2892,7 @@ void SonobusAudioProcessorEditor::showMetConfig(bool flag)
         metBox.performLayout(mMetContainer->getLocalBounds());
         
         
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMetConfigButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMetConfigButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         metCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(metCalloutBox.get())) {
@@ -2936,7 +2933,7 @@ void SonobusAudioProcessorEditor::showEffectsConfig(bool flag)
         wrap->setSize(jmin(defWidth, dw->getWidth() - 20), jmin(defHeight, dw->getHeight() - 24));
         
         
-        mEffectsContainer->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mEffectsContainer->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
         
         wrap->setViewedComponent(mEffectsContainer.get(), false);
         mEffectsContainer->setVisible(true);
@@ -2947,7 +2944,7 @@ void SonobusAudioProcessorEditor::showEffectsConfig(bool flag)
         mReverbHeaderBg->setRectangle (headbgbounds.toFloat());
 
         
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, mEffectsButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mEffectsButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         effectsCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(effectsCalloutBox.get())) {
@@ -2985,14 +2982,14 @@ void SonobusAudioProcessorEditor::showPatchbay(bool flag)
         
         wrap->setSize(jmin(defWidth + 8, dw->getWidth() - 20), jmin(defHeight + 8, dw->getHeight() - 24));
                 
-        mPatchMatrixView->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mPatchMatrixView->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
         
         wrap->setViewedComponent(mPatchMatrixView.get(), false);
         
         mPatchMatrixView->updateGridLayout();
         mPatchMatrixView->updateGrid();
         
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, mPatchbayButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mPatchbayButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         patchbayCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(patchbayCalloutBox.get())) {
@@ -3032,7 +3029,7 @@ void SonobusAudioProcessorEditor::showLatencyMatchView(bool show)
         wrap->setSize(jmin(defWidth, dw->getWidth() - 20), jmin(defHeight, dw->getHeight() - 24));
 
 
-        mLatMatchView->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mLatMatchView->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         wrap->setViewedComponent(mLatMatchView.get(), false);
         mLatMatchView->setVisible(true);
@@ -3040,7 +3037,7 @@ void SonobusAudioProcessorEditor::showLatencyMatchView(bool show)
         mLatMatchView->startLatMatchProcess();
 
 
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMainLinkButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMainLinkButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         latmatchCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(latmatchCalloutBox.get())) {
@@ -3080,12 +3077,12 @@ void SonobusAudioProcessorEditor::showVDONinjaView(bool show)
         int prefwidth = jmin(defWidth, dw->getWidth() - 30);
         
         // size it once, then get min height out of it
-        mVDONinjaView->setBounds(Rectangle<int>(0,0,prefwidth,defHeight));
+        mVDONinjaView->setBounds(juce::Rectangle<int>(0,0,prefwidth,defHeight));
 
         auto useheight = mVDONinjaView->getMinimumContentBounds().getHeight() + mVDONinjaView->getMinimumHeaderBounds().getHeight();
         auto usewidth = std::max(prefwidth, mVDONinjaView->getMinimumContentBounds().getWidth());
 
-        mVDONinjaView->setBounds(Rectangle<int>(0,0, usewidth,useheight));
+        mVDONinjaView->setBounds(juce::Rectangle<int>(0,0, usewidth,useheight));
 
         wrap->setViewedComponent(mVDONinjaView.get(), false);
         mVDONinjaView->updateState();
@@ -3093,7 +3090,7 @@ void SonobusAudioProcessorEditor::showVDONinjaView(bool show)
 
         wrap->setSize(usewidth, jmin(useheight, dw->getHeight() - 24));
 
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMainLinkButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMainLinkButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         vdoninjaViewCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(vdoninjaViewCalloutBox.get())) {
@@ -3400,14 +3397,14 @@ void SonobusAudioProcessorEditor::showSettings(bool flag)
 
         wrap->addAndMakeVisible(mOptionsView.get());
 
-        mOptionsView->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mOptionsView->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         wrap->setSize(defWidth,defHeight);
 
         updateOptionsState();
         
        
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, mTitleLabel->getScreenBounds().reduced(10));
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mTitleLabel->getScreenBounds().reduced(10));
         DBG("callout bounds: " << bounds.toString());
         settingsCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(settingsCalloutBox.get())) {
@@ -3470,14 +3467,14 @@ void SonobusAudioProcessorEditor::showMonitorDelayView(bool flag)
         wrap->setSize(jmin(defWidth + extrawidth, dw->getWidth() - 10), jmin(defHeight, dw->getHeight() - 24));
 
 
-        mMonitorDelayView->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mMonitorDelayView->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         //mMonitorDelayView->updateParams();
 
         wrap->setViewedComponent(mMonitorDelayView.get(), false);
         mMonitorDelayView->setVisible(true);
 
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMonDelayButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMonDelayButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         monDelayCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(monDelayCalloutBox.get())) {
@@ -4011,7 +4008,7 @@ void SonobusAudioProcessorEditor::showGroupMenu(bool show)
 
     Component* dw = mMainLinkButton->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = mMainLinkButton->findParentComponentOfClass<Component>();
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMainLinkButton->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMainLinkButton->getScreenBounds());
 
     SafePointer<SonobusAudioProcessorEditor> safeThis(this);
 
@@ -4096,7 +4093,7 @@ void SonobusAudioProcessorEditor::showLatencyMatchPrompt(const String & name, fl
 
         wrap->setSize(jmin(defWidth, dw->getWidth() - 20), jmin(defHeight, dw->getHeight() - 24));
 
-        mLatMatchApproveContainer->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mLatMatchApproveContainer->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         wrap->setViewedComponent(mLatMatchApproveContainer.get(), false);
         mLatMatchApproveContainer->setVisible(true);
@@ -4119,7 +4116,7 @@ void SonobusAudioProcessorEditor::showLatencyMatchPrompt(const String & name, fl
             }
         };
 
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMainLinkButton->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mMainLinkButton->getScreenBounds());
         DBG("callout bounds: " << bounds.toString());
         latmatchCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(latmatchCalloutBox.get())) {
@@ -4303,13 +4300,13 @@ void SonobusAudioProcessorEditor::resized()
         mInputChannelsContainer->updateLayout(false);
     }
 
-    Rectangle<int> peersminbounds = mPeerContainer->getMinimumContentBounds();
-    Rectangle<int> inmixminbounds = mInputChannelsContainer->getMinimumContentBounds();
+    juce::Rectangle<int> peersminbounds = mPeerContainer->getMinimumContentBounds();
+    juce::Rectangle<int> inmixminbounds = mInputChannelsContainer->getMinimumContentBounds();
 
-    Rectangle<int> inmixactualbounds = Rectangle<int>(0,0,0,0);
+    juce::Rectangle<int> inmixactualbounds = juce::Rectangle<int>(0,0,0,0);
 
     if (mInputChannelsContainer->isVisible()) {
-        inmixactualbounds = Rectangle<int>(0, 0,
+        inmixactualbounds = juce::Rectangle<int>(0, 0,
                                            std::max(inmixminbounds.getWidth(), inchantargwidth),
                                            inmixminbounds.getHeight() + 5);
 
@@ -4318,9 +4315,9 @@ void SonobusAudioProcessorEditor::resized()
 
     int vgap = inmixactualbounds.getHeight() > 0 ?  6 : 0;
 
-    mPeerContainer->setBounds(Rectangle<int>(0, inmixactualbounds.getBottom() + vgap, std::max(peersminbounds.getWidth(), mMainViewport->getWidth() - 10), std::max(peersminbounds.getHeight() + 5, mMainViewport->getHeight() - inmixactualbounds.getHeight() - vgap)));
+    mPeerContainer->setBounds(juce::Rectangle<int>(0, inmixactualbounds.getBottom() + vgap, std::max(peersminbounds.getWidth(), mMainViewport->getWidth() - 10), std::max(peersminbounds.getHeight() + 5, mMainViewport->getHeight() - inmixactualbounds.getHeight() - vgap)));
 
-    Rectangle<int> totbounds = mPeerContainer->getBounds().getUnion(inmixactualbounds);
+    juce::Rectangle<int> totbounds = mPeerContainer->getBounds().getUnion(inmixactualbounds);
     //totbounds.setHeight(totbounds.getHeight());
 
 
@@ -4341,25 +4338,25 @@ void SonobusAudioProcessorEditor::resized()
     
     mMainMessageLabel->setBounds(mMainViewport->getX() + 10, mSetupAudioButton->getBottom() + 10, mMainViewport->getRight() - mMainViewport->getX() - 20, jmin(120, mMainViewport->getBottom() - (mSetupAudioButton->getBottom() + 10)));
     
-    auto metbgbounds = Rectangle<int>(mMetEnableButton->getX(), mMetEnableButton->getY(), mMetConfigButton->getRight() - mMetEnableButton->getX(),  mMetEnableButton->getHeight()).expanded(2, 2);
+    auto metbgbounds = juce::Rectangle<int>(mMetEnableButton->getX(), mMetEnableButton->getY(), mMetConfigButton->getRight() - mMetEnableButton->getX(),  mMetEnableButton->getHeight()).expanded(2, 2);
     mMetButtonBg->setRectangle (metbgbounds.toFloat());
 
 
-    //auto grouptextbounds = Rectangle<int>(mMainPeerLabel->getX(), mMainGroupImage->getY(), mMainUserLabel->getRight() - mMainPeerLabel->getX(),  mMainGroupImage->getHeight()).expanded(2, 2);
-    //auto grouptextbounds = Rectangle<int>(mMainPeerLabel->getX(), mMainGroupImage->getY(), mMainUserLabel->getRight() - mMainPeerLabel->getX(),  mMainUserLabel->getBottom() - mMainGroupImage->getY());
-    auto grouptextbounds = Rectangle<int>(mMainPeerLabel->getX(), mPeerLayoutFullButton->getY(), mMainUserLabel->getRight() - mMainPeerLabel->getX(),  mPeerLayoutFullButton->getHeight());
+    //auto grouptextbounds = juce::Rectangle<int>(mMainPeerLabel->getX(), mMainGroupImage->getY(), mMainUserLabel->getRight() - mMainPeerLabel->getX(),  mMainGroupImage->getHeight()).expanded(2, 2);
+    //auto grouptextbounds = juce::Rectangle<int>(mMainPeerLabel->getX(), mMainGroupImage->getY(), mMainUserLabel->getRight() - mMainPeerLabel->getX(),  mMainUserLabel->getBottom() - mMainGroupImage->getY());
+    auto grouptextbounds = juce::Rectangle<int>(mMainPeerLabel->getX(), mPeerLayoutFullButton->getY(), mMainUserLabel->getRight() - mMainPeerLabel->getX(),  mPeerLayoutFullButton->getHeight());
     mMainLinkButton->setBounds(grouptextbounds);
 
 
     const auto precwidth = 20;
-    auto peerrecbounds = Rectangle<int>(mMainLinkButton->getRight() - precwidth - 4, mMainLinkButton->getY() + mMainLinkButton->getHeight()/2 - precwidth/2, precwidth,  precwidth);
-    mPeerRecImage->setTransformToFit(peerrecbounds.toFloat(), RectanglePlacement::fillDestination);
+    auto peerrecbounds = juce::Rectangle<int>(mMainLinkButton->getRight() - precwidth - 4, mMainLinkButton->getY() + mMainLinkButton->getHeight()/2 - precwidth/2, precwidth,  precwidth);
+    mPeerRecImage->setTransformToFit(peerrecbounds.toFloat(), juce::RectanglePlacement::fillDestination);
 
 
     mDragDropBg->setRectangle (getLocalBounds().toFloat());
 
 
-    auto filebgbounds = Rectangle<int>(mPlayButton->getX(), mWaveformThumbnail->getY(), 
+    auto filebgbounds = juce::Rectangle<int>(mPlayButton->getX(), mWaveformThumbnail->getY(), 
                                        mDismissTransportButton->getRight() - mPlayButton->getX(),  
                                        mDismissTransportButton->getBottom() - mWaveformThumbnail->getY()).expanded(4, 6);
     mFileAreaBg->setRectangle (filebgbounds.toFloat());
@@ -4862,7 +4859,7 @@ void SonobusAudioProcessorEditor::showPopTip(const String & message, int timeout
         popTip->showAt(target, text, timeoutMs);
     }
     else {
-        Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
+        juce::Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
         popTip->showAt(topbox, text, timeoutMs);
     }
 
@@ -4887,7 +4884,7 @@ void SonobusAudioProcessorEditor::showFilePopupMenu(Component * source)
     Component* dw = this; 
     
     
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, source->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, source->getScreenBounds());
     
     GenericItemChooser::launchPopupChooser(items, bounds, dw, this, 1000);
 }

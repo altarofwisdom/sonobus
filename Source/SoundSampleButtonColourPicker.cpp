@@ -9,11 +9,7 @@
 #include "SonoPlaybackProgressButton.h"
 #include "SonoTextButton.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
-void SoundSampleButtonColourPicker::show(const Rectangle<int>& bounds)
+void SoundSampleButtonColourPicker::show(const juce::Rectangle<int>& bounds)
 {
     auto defaultColour = selectedColour == nullptr
             ? SoundboardButtonColors::DEFAULT_BUTTON_COLOUR
@@ -31,7 +27,7 @@ void SoundSampleButtonColourPicker::show(const Rectangle<int>& bounds)
         dw = pickerButton->findParentComponentOfClass<AudioProcessorEditor>();
         if (!dw) dw = pickerButton->findParentComponentOfClass<Component>();
     }
-    Rectangle<int> abounds =  dw ? dw->getLocalArea(nullptr, bounds) : bounds;
+    juce::Rectangle<int> abounds =  dw ? dw->getLocalArea(nullptr, bounds) : bounds;
 
     CallOutBox::launchAsynchronously (std::move (colourSelector), abounds, dw);
 }

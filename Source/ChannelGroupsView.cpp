@@ -3,12 +3,6 @@
 
 #include "ChannelGroupsView.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
-
-
 using namespace SonoAudio;
 
 struct DestChannelListItemData : public GenericItemChooserItem::UserData
@@ -91,7 +85,7 @@ juce::Rectangle<int> ChannelGroupEffectsView::getMinimumContentBounds() const {
 
     defHeight = jmax(minbounds.getHeight(), minexpbounds.getHeight(), mineqbounds.getHeight(), jmax(minrevbounds.getHeight(), minprvbounds.getHeight())) + 5*headbounds.getHeight() + 8;
 
-    return Rectangle<int>(0,0,defWidth,defHeight);
+    return juce::Rectangle<int>(0,0,defWidth,defHeight);
 }
 
 
@@ -469,7 +463,7 @@ juce::Rectangle<int> ChannelGroupMonitorEffectsView::getMinimumContentBounds() c
         defHeight = jmax(minbounds.getHeight() + minrevbounds.getHeight(), 0) + headbounds.getHeight() + headrevbounds.getHeight() + 8;
     }
 
-    return Rectangle<int>(0,0,defWidth,defHeight);
+    return juce::Rectangle<int>(0,0,defWidth,defHeight);
 }
 
 
@@ -761,7 +755,7 @@ juce::Rectangle<int> ChannelGroupReverbEffectsView::getMinimumContentBounds() co
 
     defHeight = jmax(minrevbounds.getHeight() , 0) + headrevbounds.getHeight() + 8;
 
-    return Rectangle<int>(0,0,defWidth,defHeight);
+    return juce::Rectangle<int>(0,0,defWidth,defHeight);
 }
 
 
@@ -1097,7 +1091,7 @@ void ChannelGroupsView::setPeerMode(bool peermode, int index)
 
 void ChannelGroupsView::resized()
 {
-    Rectangle<int> bounds = getLocalBounds();
+    juce::Rectangle<int> bounds = getLocalBounds();
 
     if (!mPeerMode) {
         bounds = bounds.reduced(5, 0);
@@ -1121,7 +1115,7 @@ void ChannelGroupsView::resized()
             if (pvf->group >= mChanGroupBounds.size()) {
                 mChanGroupBounds.resize(pvf->group+1);
             }
-            mChanGroupBounds.getReference(pvf->group) = Rectangle<int>(topleft.getX(), topleft.getY(), pvf->getRight() - topleft.getX(), pvf->getBottom() - topleft.getY());
+            mChanGroupBounds.getReference(pvf->group) = juce::Rectangle<int>(topleft.getX(), topleft.getY(), pvf->getRight() - topleft.getX(), pvf->getBottom() - topleft.getY());
             startind = -1;
         }
     }
@@ -1132,7 +1126,7 @@ void ChannelGroupsView::resized()
 
     if (mMetChannelView && mMetChannelView->isVisible()) {
         // resize bg border
-        auto mfbounds = Rectangle<int>(mMetChannelView->getX() - 3, mMetChannelView->getY(), mMetChannelView->getWidth() + 6, mSoundboardChannelView->getBottom() - mMetChannelView->getY() + 4);
+        auto mfbounds = juce::Rectangle<int>(mMetChannelView->getX() - 3, mMetChannelView->getY(), mMetChannelView->getWidth() + 6, mSoundboardChannelView->getBottom() - mMetChannelView->getY() + 4);
         mMetFileBg->setRectangle (mfbounds.toFloat());
     }
 
@@ -1176,7 +1170,7 @@ void ChannelGroupsView::showPopTip(const String & message, int timeoutMs, Compon
         popTip->showAt(target, text, timeoutMs);
     }
     else {
-        Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
+        juce::Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
         popTip->showAt(topbox, text, timeoutMs);
     }
     popTip->toFront(false);
@@ -1186,7 +1180,7 @@ void ChannelGroupsView::showPopTip(const String & message, int timeoutMs, Compon
 void ChannelGroupsView::paint(Graphics & g)
 {    
     //g.fillAll (Colours::black);
-    Rectangle<int> bounds = getLocalBounds();
+    juce::Rectangle<int> bounds = getLocalBounds();
 
     if (!mPeerMode) {
         bounds.reduce(1, 1);
@@ -2632,9 +2626,9 @@ void ChannelGroupsView::updateLayout(bool notify)
     }
 }
 
-Rectangle<int> ChannelGroupsView::getMinimumContentBounds() const
+juce::Rectangle<int> ChannelGroupsView::getMinimumContentBounds() const
 {
-    return Rectangle<int>(0,0, channelMinWidth, channelMinHeight);
+    return juce::Rectangle<int>(0,0, channelMinWidth, channelMinHeight);
 }
 
 void ChannelGroupsView::applyToAllSliders(std::function<void(Slider *)> & routine)
@@ -3594,7 +3588,7 @@ void ChannelGroupsView::clearGroupsPressed()
 
     Component* dw = mClearButton->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = mClearButton->findParentComponentOfClass<Component>();
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, mClearButton->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mClearButton->getScreenBounds());
 
     SafePointer<ChannelGroupsView> safeThis(this);
 
@@ -3638,7 +3632,7 @@ void ChannelGroupsView::addGroupPressed()
 
     Component* dw = mAddButton->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = mAddButton->findParentComponentOfClass<Component>();
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, mAddButton->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mAddButton->getScreenBounds());
 
     SafePointer<ChannelGroupsView> safeThis(this);
 
@@ -3694,7 +3688,7 @@ void ChannelGroupsView::showChangeGroupChannels(int changroup, Component * showf
 
     Component* dw = showfrom->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = showfrom->findParentComponentOfClass<Component>();
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, showfrom->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, showfrom->getScreenBounds());
 
     SafePointer<ChannelGroupsView> safeThis(this);
     SafePointer<Component> safeSource(showfrom);
@@ -3762,7 +3756,7 @@ void ChannelGroupsView::showChangePeerChannelsLayout(int chindex, Component * sh
 
     Component* dw = showfrom->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = showfrom->findParentComponentOfClass<Component>();
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, showfrom->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, showfrom->getScreenBounds());
 
     SafePointer<ChannelGroupsView> safeThis(this);
     SafePointer<Component> safeSource(showfrom);
@@ -3898,7 +3892,7 @@ int ChannelGroupsView::getChanGroupForPoint(Point<int> pos, bool inbetween)
     return i;
 }
 
-Rectangle<int> ChannelGroupsView::getBoundsForChanGroup(int chgroup)
+juce::Rectangle<int> ChannelGroupsView::getBoundsForChanGroup(int chgroup)
 {
     if (chgroup >= 0 && chgroup < mChanGroupBounds.size()) {
         return mChanGroupBounds.getUnchecked(chgroup);
@@ -3906,7 +3900,7 @@ Rectangle<int> ChannelGroupsView::getBoundsForChanGroup(int chgroup)
     // otherwise return a line after the last of them
     if (!mChanGroupBounds.isEmpty()) {
         auto lastone = mChanGroupBounds.getLast();
-        return Rectangle<int>(lastone.getX(), lastone.getBottom(), lastone.getWidth(), 0);
+        return juce::Rectangle<int>(lastone.getX(), lastone.getBottom(), lastone.getWidth(), 0);
     }
     return {};
 }
@@ -4033,7 +4027,7 @@ void ChannelGroupsView::inputButtonPressed(Component * source, int index, bool n
 
     Component* dw = source->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = source->findParentComponentOfClass<Component>();
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, source->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, source->getScreenBounds());
 
     SafePointer<ChannelGroupsView> safeThis(this);
     SafePointer<Component> safeSource(source);
@@ -4146,7 +4140,7 @@ void ChannelGroupsView::showEffects(int index, bool flag, Component * fromView)
         wrap->setSize(jmin(defWidth + extrawidth, dw->getWidth() - 10), jmin(defHeight, dw->getHeight() - 24));
 
         
-        mEffectsView->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mEffectsView->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         mEffectsView->peerMode = mPeerMode;
         mEffectsView->peerIndex = mPeerIndex;
@@ -4157,7 +4151,7 @@ void ChannelGroupsView::showEffects(int index, bool flag, Component * fromView)
         wrap->setViewedComponent(mEffectsView.get(), false);
         mEffectsView->setVisible(true);
         
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView->getScreenBounds());
         DBG("effect callout bounds: " << bounds.toString());
         effectsCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(effectsCalloutBox.get())) {
@@ -4223,14 +4217,14 @@ void ChannelGroupsView::showMonitorEffects(int index, bool flag, Component * fro
 
         mMonEffectsView->updateLayout();
 
-        mMonEffectsView->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mMonEffectsView->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         mMonEffectsView->updateState();
 
         wrap->setViewedComponent(mMonEffectsView.get(), false);
         mMonEffectsView->setVisible(true);
 
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView->getScreenBounds());
         DBG("effect callout bounds: " << bounds.toString());
         monEffectsCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(monEffectsCalloutBox.get())) {
@@ -4301,14 +4295,14 @@ void ChannelGroupsView::showInputReverbView(bool flag, Component * fromView)
 
         mInputReverbView->updateLayout();
 
-        mInputReverbView->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        mInputReverbView->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         mInputReverbView->updateState();
 
         wrap->setViewedComponent(mInputReverbView.get(), false);
         mInputReverbView->setVisible(true);
 
-        Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView->getScreenBounds());
+        juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, fromView->getScreenBounds());
         DBG("in reverb callout bounds: " << bounds.toString());
         inReverbCalloutBox = & CallOutBox::launchAsynchronously (std::move(wrap), bounds , dw, false);
         if (CallOutBox * box = dynamic_cast<CallOutBox*>(inReverbCalloutBox.get())) {
@@ -4700,7 +4694,7 @@ void ChannelGroupsView::showDestSelectionMenu(Component * source, int index)
     Component* dw = source->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = source->findParentComponentOfClass<Component>();
 
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, source->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, source->getScreenBounds());
     
     GenericItemChooser::launchPopupChooser(items, bounds, dw, callback, selindex, dw ? dw->getHeight()-30 : 0);
 }

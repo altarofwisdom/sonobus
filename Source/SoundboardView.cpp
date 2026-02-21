@@ -10,10 +10,6 @@
 #include "SoundboardEditView.h"
 #include "SampleEditView.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
 SoundboardView::SoundboardView(SoundboardChannelProcessor* channelProcessor, File supportDir)
         : processor(std::make_unique<SoundboardProcessor>(channelProcessor, supportDir))
 {
@@ -505,7 +501,7 @@ int SoundboardView::getSampleIndexForPoint(Point<int> pos, bool inbetween)
     return i;
 }
 
-Rectangle<int> SoundboardView::getBoundsForSampleIndex(int sampind)
+juce::Rectangle<int> SoundboardView::getBoundsForSampleIndex(int sampind)
 {
     if (sampind >= 0 && sampind < mSoundButtons.size()) {
         return getLocalArea(mSoundButtons[sampind]->getParentComponent(), mSoundButtons[sampind]->getBounds());
@@ -514,7 +510,7 @@ Rectangle<int> SoundboardView::getBoundsForSampleIndex(int sampind)
     if (!mSoundButtons.empty()) {
         auto & lastone = mSoundButtons.back();
         auto bounds = lastone->getBounds();
-        return getLocalArea(lastone->getParentComponent(), Rectangle<int>(bounds.getX(), bounds.getBottom(), bounds.getWidth(), 0));
+        return getLocalArea(lastone->getParentComponent(), juce::Rectangle<int>(bounds.getX(), bounds.getBottom(), bounds.getWidth(), 0));
     }
     return {};
 }
@@ -599,7 +595,7 @@ void SoundboardView::showMenuButtonContextMenu()
     if (!parent) {
         parent = mMenuButton->findParentComponentOfClass<Component>();
     }
-    Rectangle<int> bounds = parent->getLocalArea(nullptr, mMenuButton->getScreenBounds());
+    juce::Rectangle<int> bounds = parent->getLocalArea(nullptr, mMenuButton->getScreenBounds());
 
     SafePointer <SoundboardView> safeThis(this);
     auto callback = [safeThis](GenericItemChooser* chooser, int index) mutable {
@@ -636,7 +632,7 @@ void SoundboardView::clickedAddSoundboard()
     Component* dw = findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = findParentComponentOfClass<Component>();
     if (!dw) dw = this;
-    Rectangle<int> abounds =  dw ? dw->getLocalArea(nullptr, mTitleLabel->getScreenBounds()) : mTitleLabel->getScreenBounds();
+    juce::Rectangle<int> abounds =  dw ? dw->getLocalArea(nullptr, mTitleLabel->getScreenBounds()) : mTitleLabel->getScreenBounds();
 
     CallOutBox::launchAsynchronously(
             std::move(content),
@@ -660,7 +656,7 @@ void SoundboardView::clickedRenameSoundboard()
     Component* dw = findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = findParentComponentOfClass<Component>();
     if (!dw) dw = this;
-    Rectangle<int> abounds =  dw ? dw->getLocalArea(nullptr, mBoardSelectComboBox->getScreenBounds()) : mBoardSelectComboBox->getScreenBounds();
+    juce::Rectangle<int> abounds =  dw ? dw->getLocalArea(nullptr, mBoardSelectComboBox->getScreenBounds()) : mBoardSelectComboBox->getScreenBounds();
 
     CallOutBox::launchAsynchronously(
             std::move(content),
@@ -690,7 +686,7 @@ void SoundboardView::clickedDuplicateSoundboard()
     Component* dw = findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = findParentComponentOfClass<Component>();
     if (!dw) dw = this;
-    Rectangle<int> abounds =  dw ? dw->getLocalArea(nullptr, mTitleLabel->getScreenBounds()) : mTitleLabel->getScreenBounds();
+    juce::Rectangle<int> abounds =  dw ? dw->getLocalArea(nullptr, mTitleLabel->getScreenBounds()) : mTitleLabel->getScreenBounds();
 
     CallOutBox::launchAsynchronously(
             std::move(content),
@@ -720,7 +716,7 @@ void SoundboardView::clickedDeleteSoundboard()
     if (!parent) {
         parent = mBoardSelectComboBox->findParentComponentOfClass<Component>();
     }
-    Rectangle<int> bounds = parent->getLocalArea(nullptr, mBoardSelectComboBox->getScreenBounds());
+    juce::Rectangle<int> bounds = parent->getLocalArea(nullptr, mBoardSelectComboBox->getScreenBounds());
 
     SafePointer <SoundboardView> safeThis(this);
     auto callback = [safeThis](GenericItemChooser* chooser, int index) mutable {
@@ -802,7 +798,7 @@ void SoundboardView::clickedEditSoundSample(Component& button, SoundSample& samp
     Component* dw = findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = findParentComponentOfClass<Component>();
     if (!dw) dw = this;
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, button.getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, button.getScreenBounds());
 
     content->setSize((int)SampleEditView::DEFAULT_VIEW_WIDTH, (int)SampleEditView::DEFAULT_VIEW_HEIGHT); // first time to calculate
 

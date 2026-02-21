@@ -21,8 +21,8 @@ public:
     void setForegroundImageRatio(float ratio) { fgImageRatio = ratio; }
     float getForegroundImageRatio() const { return fgImageRatio; }
     
-    void setBackgroundImagePlacement(RectanglePlacement plac) { rectPlacement = plac; }
-    RectanglePlacement getBackgroundImagePlacement() const { return rectPlacement; }
+    void setBackgroundImagePlacement(juce::RectanglePlacement plac) { rectPlacement = plac; }
+    juce::RectanglePlacement getBackgroundImagePlacement() const { return rectPlacement; }
     
     enum SonoColourIds
     {
@@ -36,5 +36,5 @@ protected:
     
     std::unique_ptr<Drawable> bgImage;
     float fgImageRatio = 0.75f;
-    RectanglePlacement rectPlacement = RectanglePlacement::stretchToFit;
+    juce::RectanglePlacement rectPlacement = juce::RectanglePlacement::stretchToFit;
 };

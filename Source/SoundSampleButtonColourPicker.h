@@ -33,7 +33,7 @@ public:
      *
      * @param bounds Screen location of the picker.
      */
-    void show(const Rectangle<int>& bounds);
+    void show(const juce::Rectangle<int>& bounds);
 
 private:
     /**

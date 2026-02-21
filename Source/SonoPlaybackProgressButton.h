@@ -134,5 +134,5 @@ private:
     std::unique_ptr<MouseListener> mouseListener;
 
     std::unique_ptr<Drawable> editImage;
-    Rectangle<int> editBounds;
+    juce::Rectangle<int> editBounds;
 };

@@ -6,11 +6,6 @@
 
 #include "RandomSentenceGenerator.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
-
-
-
 using namespace SonoAudio;
 
 class SonobusConnectTabbedComponent : public TabbedComponent
@@ -1529,12 +1524,12 @@ void ConnectView::RecentsListModel::paintListBoxItem (int rowNumber, Graphics &g
     // DebugLogC("Paint %s", text.toRawUTF8());
     float iconsize = height*yratio;
     float groupheight = height*yratio;
-    g.drawImageWithin(groupImage, 0, 0, iconsize, iconsize, RectanglePlacement::fillDestination);
+    g.drawImageWithin(groupImage, 0, 0, iconsize, iconsize, juce::RectanglePlacement::fillDestination);
     g.drawFittedText (info.groupName, iconsize + 4, 0, adjwidth*xratio - 8 - iconsize, groupheight, Justification::centredLeft, true);
 
     g.setFont (parent->recentsNameFont);
     g.setColour (parent->findColour(nameTextColourId).withAlpha(0.8f));
-    g.drawImageWithin(personImage, adjwidth*xratio, 0, iconsize, iconsize, RectanglePlacement::fillDestination);
+    g.drawImageWithin(personImage, adjwidth*xratio, 0, iconsize, iconsize, juce::RectanglePlacement::fillDestination);
     g.drawFittedText (info.userName, adjwidth*xratio + iconsize, 0, adjwidth*(1.0f - xratio) - 4 - iconsize, groupheight, Justification::centredLeft, true);
 
     String infostr;
@@ -1650,12 +1645,12 @@ void ConnectView::PublicGroupsListModel::paintListBoxItem (int rowNumber, Graphi
     // DebugLogC("Paint %s", text.toRawUTF8());
     float iconsize = height*yratio;
     float groupheight = height*yratio;
-    g.drawImageWithin(groupImage, 0, 0, iconsize, iconsize, RectanglePlacement::fillDestination);
+    g.drawImageWithin(groupImage, 0, 0, iconsize, iconsize, juce::RectanglePlacement::fillDestination);
     g.drawFittedText (info.groupName, iconsize + 4, 0, adjwidth*xratio - 8 - iconsize, groupheight, Justification::centredLeft, true);
 
     g.setFont (parent->recentsNameFont);
     g.setColour (parent->findColour(nameTextColourId).withAlpha(0.8f));
-    g.drawImageWithin(personImage, adjwidth*xratio, 0, iconsize, iconsize, RectanglePlacement::fillDestination);
+    g.drawImageWithin(personImage, adjwidth*xratio, 0, iconsize, iconsize, juce::RectanglePlacement::fillDestination);
     String usertext;
     usertext << info.activeCount << (info.activeCount > 1 ? TRANS(" active users") : TRANS(" active user"));
     g.drawFittedText (usertext, adjwidth*xratio + iconsize, 0, adjwidth*(1.0f - xratio) - 4 - iconsize, groupheight, Justification::centredLeft, true);
