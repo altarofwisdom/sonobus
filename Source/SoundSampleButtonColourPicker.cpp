@@ -2,6 +2,8 @@
 // Copyright (C) 2021 Jesse Chappell
 
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
 #include <JuceHeader.h>
 #include "SoundSampleButtonColourPicker.h"

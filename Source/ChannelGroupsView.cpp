@@ -2,6 +2,8 @@
 // Copyright (C) 2020 Jesse Chappell
 
 #include "ChannelGroupsView.h"
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
 
 

@@ -2,6 +2,8 @@
 // Copyright (C) 2020 Jesse Chappell
 
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 #include "BeatToggleGrid.h"
 
 
