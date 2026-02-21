@@ -30,7 +30,6 @@
 using namespace SonoAudio;
 
 #if JUCE_WINDOWS
-#define NOMINMAX
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 typedef int socklen_t;

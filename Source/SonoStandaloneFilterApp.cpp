@@ -27,9 +27,6 @@
   ==============================================================================
 */
 
-// needed for crappy windows
-#define NOMINMAX
-
 
 #include "JuceHeader.h"
 
