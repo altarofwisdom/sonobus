@@ -82,7 +82,7 @@ set(AOO_SYSTEM_OPUS ON CACHE INTERNAL "" FORCE)
 if (APPLE)
     add_definitions(-DAOO_OPUS_MULTISTREAM_H="../../../../mac/include/opus/opus_multistream.h")
 elseif (WIN32)
-    add_definitions(-DAOO_OPUS_MULTISTREAM_H="../../../../windows/include/opus/opus_multistream.h")
+    add_definitions(-DAOO_OPUS_MULTISTREAM_H="../../../../windows/opus/opus_multistream.h")
 endif()
 
 add_subdirectory(deps/aoo EXCLUDE_FROM_ALL )
