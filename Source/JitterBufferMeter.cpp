@@ -5,8 +5,6 @@
 
 #include "JitterBufferMeter.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 JitterBufferMeter::JitterBufferMeter()
 {

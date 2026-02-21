@@ -4,8 +4,6 @@
 
 #include "GenericItemChooser.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 enum {
     nameTextColourId = 0x1002830,

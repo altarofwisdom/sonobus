@@ -3,8 +3,6 @@
 
 #include "PeersContainerView.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 #include "JitterBufferMeter.h"
 #include <set>
 

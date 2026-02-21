@@ -6,8 +6,6 @@
 #include <JuceHeader.h>
 #include "SoundSampleButtonColourPicker.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 #include "SonoPlaybackProgressButton.h"
 #include "SonoTextButton.h"
 

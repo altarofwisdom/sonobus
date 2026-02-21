@@ -4,8 +4,6 @@
 
 #include "SonoDrawableButton.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 SonoDrawableButton::SonoDrawableButton (const String& buttonName, ButtonStyle buttonStyle)
 : DrawableButton(buttonName, buttonStyle)

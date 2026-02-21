@@ -4,7 +4,6 @@
 
 #include "SonoPlaybackProgressButton.h"
 
-using juce::RectanglePlacement;
 
 #include <utility>
 

@@ -3,8 +3,6 @@
 
 #include "ChannelGroupsView.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 
 using namespace SonoAudio;

@@ -4,8 +4,6 @@
 
 #include "SonoChoiceButton.h"
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 SonoChoiceButton::SonoChoiceButton()
 {
