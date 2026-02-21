@@ -3894,6 +3894,18 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             RemotePeer * peer = findRemotePeer(es, sinkId);
             if (peer) {
                 peer->recvActive = peer->recvAllow && e->state == kAooStreamStateActive;
+                
+                if (peer->recvActive && peer->recvChannels == 0) {
+                    AooFormatStorage f;
+                    if (peer->oursink->getSourceFormat(e->endpoint, f) == kAooOk) {
+                        const ScopedWriteLock slw (peer->sinkLock);
+                        peer->recvChannels = std::min(MAX_PANNERS, f.header.numChannels);
+                        int sinkchan = std::max(getMainBusNumOutputChannels(), peer->recvChannels);
+                        peer->oursink->setup(sinkchan, getSampleRate(), currSamplesPerBlock, 0);
+                        peer->recvMeterSource.resize (peer->recvChannels, meterRmsWindow);
+                    }
+                }
+
                 if (!peer->recvActive && !peer->sendActive) {
                     peer->connected = false;
                 } else {
@@ -4066,7 +4078,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                         double deltadroptime = (nowtime - peer->lastDroptime) * 1e-3;
                         if (deltatime > adjustlimit) {
                             //float droprate =  (peer->dataPacketsDropped - peer->lastDropCount) / deltatime;
-                            //if (droprate < dropratethresh) {
+                            //if (droprate < dropratethresh) 
                             if (deltadroptime > nodropsthresh) {
                                 float adjms = 1000.0f * currSamplesPerBlock / getSampleRate();
                                 peer->buffertimeMs -= adjms;
@@ -5757,7 +5769,7 @@ bool SonobusAudioProcessor::getRemotePeerSendActive(int index) const
     const ScopedReadLock sl (mCoreLock);        
     if (index < mRemotePeers.size()) {
         RemotePeer * remote = mRemotePeers.getUnchecked(index);
-        return remote->sendActive;
+        return remote->sendActive || remote->sendCommonActive;
     }
     return false;        
 }

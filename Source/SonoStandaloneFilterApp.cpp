@@ -58,6 +58,7 @@ extern juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter();
 #include "SonoLookAndFeel.h"
 
 #include "SonobusPluginEditor.h"
+#include "SonoUtility.h"
 
 #if JUCE_ANDROID
 #include "android/SonoBusActivity.h"
@@ -378,14 +379,7 @@ public:
 
         auto connserv = arglist.removeValueForOption(serverSpec);
         if (connserv.isNotEmpty()) {
-            cmdlineConnInfo.serverHost =  connserv.upToFirstOccurrenceOf(":", false, true);
-            String portpart = connserv.fromFirstOccurrenceOf(":", false, false);
-            int port = portpart.getIntValue();
-            if (port > 0) {
-                cmdlineConnInfo.serverPort = port;
-            } else {
-                cmdlineConnInfo.serverPort = DEFAULT_SERVER_PORT;
-            }
+            SonoUtility::parseHostPort(connserv, cmdlineConnInfo.serverHost, cmdlineConnInfo.serverPort, DEFAULT_SERVER_PORT);
             copyInfo = true;
         }
 

@@ -725,21 +725,29 @@ static Image createNSWindowSnapshot (NSWindow* nsWindow)
 {
     JUCE_AUTORELEASEPOOL
     {
-        CGImageRef screenShot = CGWindowListCreateImage (CGRectNull,
-                                                         kCGWindowListOptionIncludingWindow,
-                                                         (CGWindowID) [nsWindow windowNumber],
-                                                         kCGWindowImageBoundsIgnoreFraming);
+        NSView* view = [nsWindow contentView];
 
-        NSBitmapImageRep* bitmapRep = [[NSBitmapImageRep alloc] initWithCGImage: screenShot];
+        if (view == nil)
+            return {};
 
-        Image result (Image::ARGB, (int) [bitmapRep size].width, (int) [bitmapRep size].height, true);
+        const NSRect bounds = [view bounds];
+        NSBitmapImageRep* bitmapRep = [view bitmapImageRepForCachingDisplayInRect: bounds];
+        [view cacheDisplayInRect: bounds toBitmapImageRep: bitmapRep];
 
-        selectImageForDrawing (result);
-        [bitmapRep drawAtPoint: NSMakePoint (0, 0)];
-        releaseImageAfterDrawing();
+        const int width  = (int) [bitmapRep pixelsWide];
+        const int height = (int) [bitmapRep pixelsHigh];
 
-        [bitmapRep release];
-        CGImageRelease (screenShot);
+        if (width <= 0 || height <= 0)
+            return {};
+
+        Image result (Image::ARGB, width, height, true);
+        Image::BitmapData destData (result, Image::BitmapData::writeOnly);
+
+        const int rowBytes = (int) [bitmapRep bytesPerRow];
+        const uint8_t* src = [bitmapRep bitmapData];
+
+        for (int y = 0; y < height; ++y)
+            memcpy (destData.getLinePointer (y), src + y * rowBytes, (size_t) jmin (destData.lineStride, rowBytes));
 
         return result;
     }

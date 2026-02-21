@@ -2,6 +2,7 @@
 // Copyright (C) 2021 Jesse Chappell
 
 #include "ConnectView.h"
+#include "SonoUtility.h"
 
 #include "RandomSentenceGenerator.h"
 
@@ -817,17 +818,10 @@ void ConnectView::publicGroupLogin()
 {
     String hostport = mPublicServerHostEditor->getText();
     DBG("Public host enter pressed");
-    // parse it
-    StringArray toks = StringArray::fromTokens(hostport, ":", "");
+
     String host = "aoo.sonobus.net";
     int port = DEFAULT_SERVER_PORT;
-
-    if (toks.size() >= 1) {
-        host = toks[0].trim();
-    }
-    if (toks.size() >= 2) {
-        port = toks[1].trim().getIntValue();
-    }
+    SonoUtility::parseHostPort(hostport, host, port, DEFAULT_SERVER_PORT);
 
     AooServerConnectionInfo info;
     info.userName = mPublicServerUsernameEditor->getText();
@@ -1026,17 +1020,9 @@ void ConnectView::buttonClicked (Button* buttonThatWasClicked)
 
         String hostport = mServerHostEditor->getText();
 
-        // parse it
-        StringArray toks = StringArray::fromTokens(hostport, ":", "");
         String host = "aoo.sonobus.net";
         int port = DEFAULT_SERVER_PORT;
-
-        if (toks.size() >= 1) {
-            host = toks[0].trim();
-        }
-        if (toks.size() >= 2) {
-            port = toks[1].trim().getIntValue();
-        }
+        SonoUtility::parseHostPort(hostport, host, port, DEFAULT_SERVER_PORT);
 
         AooServerConnectionInfo info;
         info.userName = mServerUsernameEditor->getText();
@@ -1057,17 +1043,9 @@ void ConnectView::buttonClicked (Button* buttonThatWasClicked)
 
         String hostport = mPublicServerHostEditor->getText();
 
-        // parse it
-        StringArray toks = StringArray::fromTokens(hostport, ":", "");
         String host = "aoo.sonobus.net";
         int port = DEFAULT_SERVER_PORT;
-
-        if (toks.size() >= 1) {
-            host = toks[0].trim();
-        }
-        if (toks.size() >= 2) {
-            port = toks[1].trim().getIntValue();
-        }
+        SonoUtility::parseHostPort(hostport, host, port, DEFAULT_SERVER_PORT);
 
         AooServerConnectionInfo info;
         info.userName = mPublicServerUsernameEditor->getText();
@@ -1383,25 +1361,15 @@ bool ConnectView::handleSonobusURL(const URL & url)
     if (url.getScheme() == "sonobus") {
         // use domain part as host:port
         String hostpart = url.getDomain();
-        currConnectionInfo.serverHost =  hostpart.upToFirstOccurrenceOf(":", false, true);
         int port = url.getPort();
-        if (port > 0) {
-            currConnectionInfo.serverPort = port;
-        } else {
-            currConnectionInfo.serverPort = DEFAULT_SERVER_PORT;
-        }
+        if (port <= 0) port = DEFAULT_SERVER_PORT;
+        
+        SonoUtility::parseHostPort(hostpart, currConnectionInfo.serverHost, currConnectionInfo.serverPort, port);
     }
     else {
         if ((ind = pnames.indexOf("s", true)) >= 0) {
             String hostpart = pvals[ind];
-            currConnectionInfo.serverHost =  hostpart.upToFirstOccurrenceOf(":", false, true);
-            String portpart = hostpart.fromFirstOccurrenceOf(":", false, false);
-            int port = portpart.getIntValue();
-            if (port > 0) {
-                currConnectionInfo.serverPort = port;
-            } else {
-                currConnectionInfo.serverPort = DEFAULT_SERVER_PORT;
-            }
+            SonoUtility::parseHostPort(hostpart, currConnectionInfo.serverHost, currConnectionInfo.serverPort, DEFAULT_SERVER_PORT);
         }
     }
 

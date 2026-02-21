@@ -37,4 +37,42 @@ public:
         }
     }
 
+    static void parseHostPort(const String& input, String& host, int& port, int defaultPort)
+    {
+        String trimmed = input.trim();
+        if (trimmed.startsWith("[") && trimmed.contains("]")) {
+            // IPv6 with brackets: [addr]:port or [addr]
+            host = trimmed.fromFirstOccurrenceOf("[", false, false).upToFirstOccurrenceOf("]", false, false);
+            String portPart = trimmed.fromFirstOccurrenceOf("]", false, false);
+            if (portPart.startsWith(":")) {
+                int p = portPart.substring(1).getIntValue();
+                if (p > 0) port = p;
+                else port = defaultPort;
+            } else {
+                port = defaultPort;
+            }
+        } else {
+            // Check if there's exactly one colon, or multiple colons (IPv6 without brackets)
+            int lastColon = trimmed.lastIndexOf(":");
+            int firstColon = trimmed.indexOf(":");
+            
+            if (lastColon != -1 && lastColon == firstColon) {
+                // Exactly one colon: host:port
+                host = trimmed.substring(0, lastColon);
+                int p = trimmed.substring(lastColon + 1).getIntValue();
+                if (p > 0) port = p;
+                else port = defaultPort;
+            } else if (lastColon != -1 && trimmed.substring(lastColon + 1).containsOnly("0123456789") && trimmed.substring(lastColon + 1).isNotEmpty()) {
+                // Multiple colons, but last part is numeric: assume addr:port
+                host = trimmed.substring(0, lastColon);
+                int p = trimmed.substring(lastColon + 1).getIntValue();
+                if (p > 0) port = p;
+                else port = defaultPort;
+            } else {
+                // No colon or multiple colons without clear port: assume address only
+                host = trimmed;
+                port = defaultPort;
+            }
+        }
+    }
 };
