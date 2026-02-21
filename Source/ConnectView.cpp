@@ -6,6 +6,9 @@
 
 #include "RandomSentenceGenerator.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
+
 using namespace SonoAudio;
 
 class SonobusConnectTabbedComponent : public TabbedComponent
@@ -407,7 +410,7 @@ ConnectView::~ConnectView() {}
 juce::Rectangle<int> ConnectView::getMinimumContentBounds() const {
     int defWidth = 200;
     int defHeight = 100;
-    return Rectangle<int>(0,0,defWidth,defHeight);
+    return juce::Rectangle<int>(0,0,defWidth,defHeight);
 }
 
 void ConnectView::grabInitialFocus()
@@ -1131,7 +1134,7 @@ void ConnectView::showAdvancedMenu()
 
     Component* dw = mConnectMenuButton->findParentComponentOfClass<AudioProcessorEditor>();
     if (!dw) dw = mConnectMenuButton->findParentComponentOfClass<Component>();
-    Rectangle<int> bounds =  dw->getLocalArea(nullptr, mConnectMenuButton->getScreenBounds());
+    juce::Rectangle<int> bounds =  dw->getLocalArea(nullptr, mConnectMenuButton->getScreenBounds());
 
     SafePointer<ConnectView> safeThis(this);
 
@@ -1153,7 +1156,7 @@ void ConnectView::showAdvancedMenu()
 
         wrap->setSize(jmin(defWidth + extrawidth, dw->getWidth() - 10), jmin(defHeight, dw->getHeight() - 24));
 
-        safeThis->mDirectConnectContainer->setBounds(Rectangle<int>(0,0,defWidth,defHeight));
+        safeThis->mDirectConnectContainer->setBounds(juce::Rectangle<int>(0,0,defWidth,defHeight));
 
         wrap->setViewedComponent(safeThis->mDirectConnectContainer.get(), false);
         safeThis->mDirectConnectContainer->setVisible(true);
@@ -1443,7 +1446,7 @@ void ConnectView::showPopTip(const String & message, int timeoutMs, Component * 
         popTip->showAt(target, text, timeoutMs);
     }
     else {
-        Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
+        juce::Rectangle<int> topbox(getWidth()/2 - maxwidth/2, 0, maxwidth, 2);
         popTip->showAt(topbox, text, timeoutMs);
     }
     popTip->toFront(false);
@@ -1454,7 +1457,7 @@ void ConnectView::paint(Graphics & g)
 {
     /*
     //g.fillAll (Colours::black);
-    Rectangle<int> bounds = getLocalBounds();
+    juce::Rectangle<int> bounds = getLocalBounds();
 
     bounds.reduce(1, 1);
     bounds.removeFromLeft(3);
@@ -1504,7 +1507,7 @@ void ConnectView::RecentsListModel::paintListBoxItem (int rowNumber, Graphics &g
 
     if (rowIsSelected) {
         g.setColour (parent->findColour(selectedColourId));
-        g.fillRect(Rectangle<int>(0,0,width,height));
+        g.fillRect(juce::Rectangle<int>(0,0,width,height));
     }
 
     g.setColour(parent->findColour(separatorColourId));
@@ -1553,7 +1556,7 @@ void ConnectView::RecentsListModel::paintListBoxItem (int rowNumber, Graphics &g
 
     g.drawFittedText (infostr, 14, height * yratio, adjwidth - 24, height * (1.0f - yratio), Justification::centredTop, true);
 
-    removeImage->drawWithin(g, Rectangle<float>(adjwidth + removewidth*0.25*yratio, height*0.5 - removewidth*0.5*yratio, removewidth*yratio, removewidth*yratio), RectanglePlacement::fillDestination, 0.9);
+    removeImage->drawWithin(g, juce::Rectangle<float>(adjwidth + removewidth*0.25*yratio, height*0.5 - removewidth*0.5*yratio, removewidth*yratio, removewidth*yratio), juce::RectanglePlacement::fillDestination, 0.9);
 
     removeButtonX = adjwidth;
     cachedWidth = width;
@@ -1626,7 +1629,7 @@ void ConnectView::PublicGroupsListModel::paintListBoxItem (int rowNumber, Graphi
 
     if (rowIsSelected || iscurr) {
         g.setColour (parent->findColour(selectedColourId));
-        g.fillRect(Rectangle<int>(0,0,width,height));
+        g.fillRect(juce::Rectangle<int>(0,0,width,height));
     }
 
     g.setColour(parent->findColour(separatorColourId));
