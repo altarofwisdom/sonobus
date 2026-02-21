@@ -4,6 +4,8 @@
 
 
 #include <sstream>
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
 #include "SoundboardView.h"
 
@@ -12,8 +14,6 @@
 
 SoundboardView::SoundboardView(SoundboardChannelProcessor* channelProcessor, File supportDir)
         : processor(std::make_unique<SoundboardProcessor>(channelProcessor, supportDir))
-using juce::Rectangle;
-using juce::RectanglePlacement;
 {
     setOpaque(true);
 

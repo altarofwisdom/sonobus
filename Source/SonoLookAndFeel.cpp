@@ -4,6 +4,8 @@
 
 #include "SonoLookAndFeel.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 #include "SonoDrawableButton.h"
 //#include "ConfigurationRowView.h"
 #include "SonoTextButton.h"
@@ -12,8 +14,6 @@
 SonoLookAndFeel::SonoLookAndFeel()
 {
     // setColour (mainBackgroundColourId, Colour::greyLevel (0.8f));
-using juce::Rectangle;
-using juce::RectanglePlacement;
     //DBG("Sonolook and feel");
     
     setUsingNativeAlertWindows(true);

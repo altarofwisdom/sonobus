@@ -4,6 +4,8 @@
 
 #include "SonoChoiceButton.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
 SonoChoiceButton::SonoChoiceButton()
 {
@@ -12,8 +14,6 @@ SonoChoiceButton::SonoChoiceButton()
     textLabel->setJustificationType(Justification::centredLeft);
     textLabel->setAccessible(false);
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
     selIndex = 0;
     addListener(this);
     

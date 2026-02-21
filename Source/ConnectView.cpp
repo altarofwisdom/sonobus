@@ -4,6 +4,8 @@
 #include "ConnectView.h"
 #include "SonoUtility.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 #include "RandomSentenceGenerator.h"
 
 
@@ -12,8 +14,6 @@ using namespace SonoAudio;
 class SonobusConnectTabbedComponent : public TabbedComponent
 {
 public:
-using juce::Rectangle;
-using juce::RectanglePlacement;
     SonobusConnectTabbedComponent(TabbedButtonBar::Orientation orientation, ConnectView & editor_) : TabbedComponent(orientation), editor(editor_) {
 
     }

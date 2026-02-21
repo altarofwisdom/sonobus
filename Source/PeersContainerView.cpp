@@ -4,6 +4,8 @@
 #include "PeersContainerView.h"
 
 #include "JitterBufferMeter.h"
+using juce::Rectangle;
+using juce::RectanglePlacement;
 #include <set>
 
 using namespace SonoAudio;
@@ -12,8 +14,6 @@ PeerViewInfo::PeerViewInfo() : smallLnf(12), medLnf(14), sonoSliderLNF(12), panS
 {
     bgColor = Colour::fromFloatRGBA(0.112f, 0.112f, 0.112f, 1.0f);
     borderColor = Colour::fromFloatRGBA(0.5f, 0.5f, 0.5f, 0.3f);
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
     sonoSliderLNF.textJustification = Justification::centredLeft;
     panSliderLNF.textJustification = Justification::centredLeft;

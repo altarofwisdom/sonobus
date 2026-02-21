@@ -4,6 +4,8 @@
 
 
 #include "SonobusPluginProcessor.h"
+using juce::Rectangle;
+using juce::RectanglePlacement;
 #include "SonobusPluginEditor.h"
 
 
@@ -12,8 +14,6 @@
 #include "PeersContainerView.h"
 #include "WaveformTransportComponent.h"
 #include "RandomSentenceGenerator.h"
-using juce::Rectangle;
-using juce::RectanglePlacement;
 #include "SonoUtility.h"
 #include "SonobusTypes.h"
 #include "ChannelGroupsView.h"

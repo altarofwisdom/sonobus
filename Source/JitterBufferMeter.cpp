@@ -4,6 +4,8 @@
 
 
 #include "JitterBufferMeter.h"
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
 
 JitterBufferMeter::JitterBufferMeter()
@@ -12,8 +14,6 @@ JitterBufferMeter::JitterBufferMeter()
     barColor = jitterColor.withAlpha(0.7f);
     //fixedColor = Colour::fromFloatRGBA(0.6f, 0.2f, 0.6f, 1.0f);
     setInterceptsMouseClicks(false, false);
-using juce::Rectangle;
-using juce::RectanglePlacement;
 }
 
 JitterBufferMeter::~JitterBufferMeter()

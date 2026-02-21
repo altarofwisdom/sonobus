@@ -4,6 +4,8 @@
 
 #include "SonoPlaybackProgressButton.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
 #include <utility>
 
@@ -12,8 +14,6 @@ SonoPlaybackProgressButton::SonoPlaybackProgressButton() : TextButton()
     initStuff();
 }
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 SonoPlaybackProgressButton::SonoPlaybackProgressButton(const String& buttonName) : TextButton(buttonName)
 {
     initStuff();

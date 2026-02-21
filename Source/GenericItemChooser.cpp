@@ -4,6 +4,8 @@
 
 #include "GenericItemChooser.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
 enum {
     nameTextColourId = 0x1002830,
@@ -12,8 +14,6 @@ enum {
     separatorColourId = 0x1002860,
     disabledColourId = 0x1002870
 };
-using juce::Rectangle;
-using juce::RectanglePlacement;
 
 
 CallOutBox& GenericItemChooser::launchPopupChooser(const Array<GenericItemChooserItem> & items, Rectangle<int> targetBounds, Component * targetComponent, GenericItemChooser::Listener * listener, int tag, int selectedIndex, int maxheight, bool dismissSel)

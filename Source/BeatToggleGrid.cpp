@@ -4,6 +4,8 @@
 
 #include "BeatToggleGrid.h"
 
+using juce::Rectangle;
+using juce::RectanglePlacement;
 
 //#include "DebugLogC.h"
 
@@ -12,8 +14,6 @@ BeatToggleGrid::BeatToggleGrid()
     setupStuff();
 }
 
-using juce::Rectangle;
-using juce::RectanglePlacement;
 BeatToggleGrid::~BeatToggleGrid()
 {
 
