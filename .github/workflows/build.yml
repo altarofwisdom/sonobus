@@ -37,12 +37,15 @@ jobs:
           submodules: recursive
       - name: Checkout ASIO SDK
         run: |
+          git config --global core.longpaths true
           if (Test-Path asiosdk) { Remove-Item -Recurse -Force asiosdk }
           git clone --depth 1 https://github.com/audiosdk/asio.git asiosdk
       - name: Configure CMake
         run: |
           if (Test-Path build) { Remove-Item -Recurse -Force build }
-          cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DASIO_SDK_DIR=asiosdk
+          $AsioPath = (Resolve-Path asiosdk).Path
+          Write-Host "ASIO SDK Path: $AsioPath"
+          cmake -B build -DCMAKE_BUILD_TYPE=Release "-DASIO_SDK_DIR=$AsioPath"
       - name: Build
         run: cmake --build build --config Release --target SonoBus_Standalone --parallel 4
       - name: Upload Artifacts
