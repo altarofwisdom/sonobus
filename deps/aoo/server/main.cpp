@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
+#include <thread>
 
 #ifdef _WIN32
 # include <windows.h>
@@ -292,9 +293,48 @@ int main(int argc, const char **argv) {
         g_tcp_server.run();
     });
 
-    if (g_loglevel >= kAooLogLevelVerbose) {
-        std::cout << "Listening on port " << port << std::endl;
-    }
+    // fetch and display public IP addresses
+    std::thread([port]() {
+        auto fetch_ip = [](const char *url) -> std::string {
+            std::string result;
+            std::string cmd = std::string("curl -s -m 3 ") + url;
+#ifdef _WIN32
+            FILE *fp = _popen(cmd.c_str(), "r");
+#else
+            FILE *fp = popen(cmd.c_str(), "r");
+#endif
+            if (fp) {
+                char buffer[128];
+                while (fgets(buffer, sizeof(buffer), fp) != nullptr) {
+                    result += buffer;
+                }
+#ifdef _WIN32
+                _pclose(fp);
+#else
+                pclose(fp);
+#endif
+                // trim whitespace
+                const char *ws = " \t\n\r\f\v";
+                result.erase(result.find_last_not_of(ws) + 1);
+                result.erase(0, result.find_first_not_of(ws));
+            }
+            return result;
+        };
+
+        std::string v4 = fetch_ip("https://4.icanhazip.com");
+        if (v4.empty()) v4 = fetch_ip("https://ifconfig.me/ip");
+        if (v4.empty()) v4 = fetch_ip("https://api.ipify.org");
+
+        std::string v6 = fetch_ip("https://6.icanhazip.com");
+        if (v6.empty()) v6 = fetch_ip("https://ifconfig.co/ip");
+
+        if (!v4.empty()) {
+            std::cout << "WAN IPv4: " << v4 << ":" << port << std::endl;
+        }
+        if (!v6.empty()) {
+            std::cout << "WAN IPv6: [" << v6 << "]:" << port << std::endl;
+        }
+    }).detach();
 
     // wait for stop signal
     g_semaphore.wait();

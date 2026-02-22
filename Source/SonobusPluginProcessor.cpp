@@ -1464,7 +1464,6 @@ bool SonobusAudioProcessor::joinServerGroup(const String & group, const String &
         std::string errmsg;
 
         if (result == kAooOk) {
-            DBG("Joined group - " << group);
             auto r = (const AooResponseGroupJoin *)response;
             const ScopedLock sl (obj->mClientLock);
             obj->mCurrentJoinedGroup = group; //CharPointer_UTF8 (e->name);
