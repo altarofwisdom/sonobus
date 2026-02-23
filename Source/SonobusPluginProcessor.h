@@ -854,6 +854,8 @@ public:
     void setLanguageOverrideCode(const String & code) { mLangOverrideCode = code; }
     String getLanguageOverrideCode() const { return mLangOverrideCode; }
 
+    void logToRemote(const String& msg);
+
     static int32_t udpsend(void *user, const AooByte *msg, AooInt32 size,
                            const void *addr, AooAddrSize addrlen, AooFlag flags);
 
@@ -1300,6 +1302,10 @@ private:
     ValueTree   mGlobalState;
     
     String mLangOverrideCode;
+
+    String mRemoteLogHost;
+    int mRemoteLogPort = 0;
+    int mLogSocket = -1;
 
     // main state
     AudioProcessorValueTreeState mState;

@@ -9,6 +9,8 @@
 #include <string.h>
 #include <iostream>
 #include <thread>
+#include <list>
+#include <vector>
 
 #ifdef _WIN32
 # include <windows.h>
@@ -55,17 +57,38 @@ void stop_server(int error) {
     g_semaphore.post();
 }
 
-aoo::udp_server g_udp_server;
+// Support multiple server instances for Split Dual Stack
+std::list<aoo::udp_server> g_udp_servers;
+std::list<aoo::tcp_server> g_tcp_servers;
 
-void handle_udp_receive(int e, const aoo::ip_address& addr,
+void handle_udp_receive(aoo::udp_server* server, int e, const aoo::ip_address& addr,
                         const AooByte *data, AooSize size) {
+    // DIAGNOSTIC: Print everything to prove reception
+    /*
     if (e == 0) {
+         // std::cout << "RX UDP from: " << addr.name_unmapped() << " size: " << size << std::endl;
+    }
+    */
+
+    if (g_loglevel >= kAooLogLevelVerbose) {
+         std::cout << "UDP received " << size << " bytes from " << addr << std::endl;
+    }
+    if (e == 0) {
+        if (size > 9 && !memcmp(data, "[SONOLOG]", 9)) {
+             std::cout << std::string((const char *)data + 9, size - 9) << std::endl;
+             return;
+        }
+        // Use the specific server instance to reply, ensuring correct Source IP
         g_aoo_server->handleUdpMessage(data, size, addr.address(), addr.length(),
-            [](void *, const AooByte *data, AooInt32 size,
+            [](void *user, const AooByte *data, AooInt32 size,
                     const void *address, AooAddrSize addrlen, AooFlag) {
+                auto* srv = static_cast<aoo::udp_server*>(user);
                 aoo::ip_address addr((const struct sockaddr *)address, addrlen);
-                return g_udp_server.send(addr, data, size);
-            }, nullptr);
+                if (g_loglevel >= kAooLogLevelVerbose) {
+                     std::cout << "UDP sending " << size << " bytes to " << addr << std::endl;
+                }
+                return srv->send(addr, data, size);
+            }, server);
     } else {
         if (g_loglevel >= kAooLogLevelError)
             std::cout << "UDP server: recv() failed: " << aoo::socket_strerror(e) << std::endl;
@@ -73,15 +96,18 @@ void handle_udp_receive(int e, const aoo::ip_address& addr,
     }
 }
 
-aoo::tcp_server g_tcp_server;
-
-AooId handle_tcp_accept(int e, const aoo::ip_address& addr) {
+AooId handle_tcp_accept(aoo::tcp_server* server, int e, const aoo::ip_address& addr) {
+    if (g_loglevel >= kAooLogLevelVerbose) {
+         std::cout << "TCP connection attempt from " << addr << std::endl;
+    }
     if (e == 0) {
         // add new client
         AooId id;
-        g_aoo_server->addClient([](void *, AooId client, const AooByte *data, AooSize size) {
-            return g_tcp_server.send(client, data, size);
-        }, nullptr, &id);
+        // Bind the specific TCP server instance for replies
+        g_aoo_server->addClient([](void *user, AooId client, const AooByte *data, AooSize size) {
+            auto* srv = static_cast<aoo::tcp_server*>(user);
+            return srv->send(client, data, size);
+        }, server, &id);
         if (g_loglevel >= kAooLogLevelVerbose) {
             std::cout << "Add new client " << id << std::endl;
         }
@@ -97,14 +123,14 @@ AooId handle_tcp_accept(int e, const aoo::ip_address& addr) {
     }
 }
 
-void handle_tcp_receive(int e, AooId client, const aoo::ip_address& addr,
+void handle_tcp_receive(aoo::tcp_server* server, int e, AooId client, const aoo::ip_address& addr,
                         const AooByte *data, AooSize size) {
     if (e == 0 && size > 0) {
         // handle client message
         if (auto err = g_aoo_server->handleClientMessage(client, data, size); err != kAooOk) {
             // remove misbehaving client
             g_aoo_server->removeClient(client);
-            g_tcp_server.close(client);
+            server->close(client);
             if (g_loglevel >= kAooLogLevelWarning)
                 std::cout << "Close client " << client << " after error: " << aoo_strerror(err) << std::endl;
         }
@@ -164,6 +190,7 @@ void print_usage() {
         << "  -h, --help             display help and exit\n"
         << "  -v, --version          print version and exit\n"
         << "  -p, --port             port number (default = " << AOO_DEFAULT_SERVER_PORT << ")\n"
+        << "  -b, --bind             bind to specific address\n"
         << "  -r, --relay            enable server relay\n"
         << "  -l, --log-level=LEVEL  set log level\n"
         << std::endl;
@@ -198,6 +225,7 @@ int main(int argc, const char **argv) {
 
     // parse command line options
     int port = AOO_DEFAULT_SERVER_PORT;
+    std::string bind_addr_str;
     bool relay = false;
 
     argc--; argv++;
@@ -219,6 +247,12 @@ int main(int argc, const char **argv) {
                     std::cout << "Port number " << port << " out of range" << std::endl;
                     return EXIT_FAILURE;
                 }
+                argc--; argv++;
+            } else if (match_option(argv[0], "-b", "--bind")) {
+                if (!check_arguments(argv, argc, 1)) {
+                    return EXIT_FAILURE;
+                }
+                bind_addr_str = argv[1];
                 argc--; argv++;
             } else if (match_option(argv[0], "-r", "--relay")) {
                 relay = true;
@@ -257,27 +291,70 @@ int main(int argc, const char **argv) {
         return EXIT_FAILURE;
     }
 
-    // setup UDP server
-    // TODO: increase socket receive buffer for relay? Use threaded receive?
-    try {
-        g_udp_server.start(port, handle_udp_receive);
-    } catch (const std::exception& e) {
-        std::cout << "Could not start UDP server: " << e.what() << std::endl;
-        return EXIT_FAILURE;
+    std::vector<aoo::ip_address> bind_addresses;
+
+    if (!bind_addr_str.empty()) {
+        aoo::ip_address addr(bind_addr_str, port);
+        if (!addr.valid()) {
+            std::cout << "Invalid bind address: " << bind_addr_str << std::endl;
+            return EXIT_FAILURE;
+        }
+        
+        bind_addresses.push_back(addr);
+
+        // If specific IPv6 address (and not wildcard), also bind to IPv4 wildcard
+        // to support "Split Dual Stack"
+        if (addr.type() == aoo::ip_address::IPv6 && bind_addr_str != "::") {
+             bind_addresses.push_back(aoo::ip_address("0.0.0.0", port));
+             std::cout << "Enabling Split Dual Stack (Specific IPv6 + IPv4 Wildcard)" << std::endl;
+        }
+
+    } else {
+        // Default wildcard IPv6 (Dual Stack if supported)
+        bind_addresses.push_back(aoo::ip_address(port, aoo::ip_address::IPv6));
     }
 
-    // setup TCP server
-    try {
-        g_tcp_server.start(port, handle_tcp_accept, handle_tcp_receive);
-    } catch (const std::exception& e) {
-        std::cout << "Could not start TCP server: " << e.what() << std::endl;
-        return EXIT_FAILURE;
+    // setup UDP servers
+    for (const auto& bind_addr : bind_addresses) {
+        try {
+            g_udp_servers.emplace_back();
+            auto& server = g_udp_servers.back();
+            
+            // Bind handler with pointer to this specific server instance
+            server.start(bind_addr, [&server](int e, const aoo::ip_address& addr, const AooByte *data, AooSize size) {
+                handle_udp_receive(&server, e, addr, data, size);
+            });
+        } catch (const std::exception& e) {
+            std::cout << "Could not start UDP server on " << bind_addr << ": " << e.what() << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
+
+    // setup TCP servers
+    for (const auto& bind_addr : bind_addresses) {
+        try {
+            g_tcp_servers.emplace_back();
+            auto& server = g_tcp_servers.back();
+
+            server.start(bind_addr, 
+                [&server](int e, const aoo::ip_address& addr) {
+                    return handle_tcp_accept(&server, e, addr);
+                },
+                [&server](int e, AooId client, const aoo::ip_address& addr, const AooByte *data, AooSize size) {
+                    handle_tcp_receive(&server, e, client, addr, data, size);
+                }
+            );
+        } catch (const std::exception& e) {
+            std::cout << "Could not start TCP server on " << bind_addr << ": " << e.what() << std::endl;
+            return EXIT_FAILURE;
+        }
     }
 
     // setup AooServer
-    auto flags = aoo::socket_family(g_udp_server.socket()) == aoo::ip_address::IPv6 ?
-                     kAooSocketDualStack : kAooSocketIPv4;
-
+    // Use DualStack flag generally, as we want to support everything. 
+    // The specific binding handles the restriction.
+    AooSocketFlags flags = kAooSocketDualStack;
+    
     if (auto err = g_aoo_server->setup(port, flags); err != kAooOk) {
         std::cout << "Could not setup AooServer: " << aoo_strerror(err) << std::endl;
         return EXIT_FAILURE;
@@ -285,17 +362,29 @@ int main(int argc, const char **argv) {
 
     g_aoo_server->setServerRelay(relay);
 
-    // finally start network threads
-    auto udp_thread = std::thread([]() {
-        g_udp_server.run();
-    });
-    auto tcp_thread = std::thread([]() {
-        g_tcp_server.run();
-    });
+    std::vector<std::thread> threads;
+
+    // start network threads
+    for (auto& server : g_udp_servers) {
+        threads.emplace_back([&server]() { server.run(); });
+    }
+    for (auto& server : g_tcp_servers) {
+        threads.emplace_back([&server]() { server.run(); });
+    }
+
+    if (g_loglevel >= kAooLogLevelVerbose) {
+        std::cout << "Server started." << std::endl;
+        for (auto& server : g_udp_servers) {
+            std::cout << "UDP server listening on " << server.address() << std::endl;
+        }
+        for (auto& server : g_tcp_servers) {
+            std::cout << "TCP server listening on " << server.address() << std::endl;
+        }
+    }
 
     // fetch and display public IP addresses
     std::thread([port]() {
-        auto fetch_ip = [](const char *url) -> std::string {
+        auto fetch_url = [](const char *url) -> std::string {
             std::string result;
             std::string cmd = std::string("curl -s -m 3 ") + url;
 #ifdef _WIN32
@@ -321,18 +410,49 @@ int main(int argc, const char **argv) {
             return result;
         };
 
-        std::string v4 = fetch_ip("https://4.icanhazip.com");
-        if (v4.empty()) v4 = fetch_ip("https://ifconfig.me/ip");
-        if (v4.empty()) v4 = fetch_ip("https://api.ipify.org");
+        std::string v4 = fetch_url("https://4.icanhazip.com");
+        if (v4.empty()) v4 = fetch_url("https://ifconfig.me/ip");
+        if (v4.empty()) v4 = fetch_url("https://api.ipify.org");
 
-        std::string v6 = fetch_ip("https://6.icanhazip.com");
-        if (v6.empty()) v6 = fetch_ip("https://ifconfig.co/ip");
+        std::vector<std::pair<std::string, std::string>> v6_addrs;
+#ifdef __APPLE__
+        // On macOS, collect global IPv6 addresses from ifconfig
+        FILE *fp = popen("ifconfig", "r");
+        if (fp) {
+            char line[256];
+            while (fgets(line, sizeof(line), fp) != nullptr) {
+                std::string s(line);
+                if (s.find("inet6 ") != std::string::npos && 
+                    s.find("fe80::") == std::string::npos) { // ignore link-local
+                    
+                    size_t start = s.find("inet6 ") + 6;
+                    size_t end = s.find(" ", start);
+                    if (start != std::string::npos && end != std::string::npos) {
+                        std::string addr = s.substr(start, end - start);
+                        std::string type = "global";
+                        if (s.find(" secured") != std::string::npos) type = "secured";
+                        if (s.find(" temporary") != std::string::npos) type = "temporary";
+                        if (s.find(" deprecated") != std::string::npos) continue; // ignore deprecated
+                        
+                        v6_addrs.push_back({addr, type});
+                    }
+                }
+            }
+            pclose(fp);
+        }
+#endif
+        // Fallback or non-macOS
+        if (v6_addrs.empty()) {
+             std::string v6 = fetch_url("https://6.icanhazip.com");
+             if (v6.empty()) v6 = fetch_url("https://ifconfig.co/ip");
+             if (!v6.empty()) v6_addrs.push_back({v6, "wan"});
+        }
 
         if (!v4.empty()) {
             std::cout << "WAN IPv4: " << v4 << ":" << port << std::endl;
         }
-        if (!v6.empty()) {
-            std::cout << "WAN IPv6: [" << v6 << "]:" << port << std::endl;
+        for (auto& pair : v6_addrs) {
+            std::cout << "WAN IPv6 (" << pair.second << "): [" << pair.first << "]:" << port << std::endl;
         }
     }).detach();
 
@@ -347,11 +467,12 @@ int main(int argc, const char **argv) {
     }
 
     // stop UDP and TCP server and exit
-    g_udp_server.stop();
-    udp_thread.join();
-
-    g_tcp_server.stop();
-    tcp_thread.join();
+    for (auto& server : g_udp_servers) server.stop();
+    for (auto& server : g_tcp_servers) server.stop();
+    
+    for (auto& thread : threads) {
+        if (thread.joinable()) thread.join();
+    }
 
     aoo_terminate();
 

@@ -23,6 +23,23 @@
 
 #include <algorithm>
 #include <thread>
+#include <iostream>
+#include <sstream>
+
+static SonobusAudioProcessor* g_activeProcessor = nullptr;
+
+void remote_log_helper(const String& msg);
+
+#define SONO_LOG(x) do { \
+    std::stringstream ss; \
+    ss << x; \
+    String __s(ss.str()); \
+    std::cout << "[SONO] " << __s << std::endl; \
+    remote_log_helper(__s); \
+} while(0)
+
+#undef DBG
+#define DBG(x) SONO_LOG(x)
 
 #include "LatencyMeasurer.h"
 #include "Metronome.h"
@@ -633,6 +650,7 @@ SonobusAudioProcessor::SonobusAudioProcessor()
 mReconnectTimer(*this),
 soundboardChannelProcessor(std::make_unique<SoundboardChannelProcessor>()),
 mGlobalState("SonobusGlobalState"),
+mLogSocket(-1),
 mState (*this, &mUndoManager, "SonoBusAoO",
 {
            std::make_unique<AudioParameterFloat>(ParameterID(paramInGain, 1),     TRANS ("In Gain"),    NormalisableRange<float>(0.0, 4.0, 0.0, 0.33), mInGain.get(), "", AudioProcessorParameter::genericParameter,
@@ -724,6 +742,8 @@ mState (*this, &mUndoManager, "SonoBusAoO",
 
 })
 {
+    g_activeProcessor = this;
+
     mState.addParameterListener (paramInGain, this);
     mState.addParameterListener (paramDry, this);
     mState.addParameterListener (paramWet, this);
@@ -876,6 +896,8 @@ mState (*this, &mUndoManager, "SonoBusAoO",
 
 SonobusAudioProcessor::~SonobusAudioProcessor()
 {
+    if (g_activeProcessor == this) g_activeProcessor = nullptr;
+
     mTransportSource.setSource(nullptr);
     mTransportSource.removeChangeListener(this);
 
@@ -1245,9 +1267,9 @@ bool SonobusAudioProcessor::connectToServer(const String & host, int port, const
             obj->mSessionConnectionStamp = 0.0;
             obj->mCurrentClientId = kAooIdInvalid;
 
-            DBG("Error connecting to server: " << reply->errorCode << " msg: " << reply->errorMessage);
+            DBG("Error connecting to server (Result: " << result << "): " << (reply ? reply->errorCode : -1) << " msg: " << (reply ? reply->errorMessage : "null"));
 
-            obj->clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientConnected, obj, response->type != kAooRequestError, reply->errorMessage);
+            obj->clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientConnected, obj, response->type != kAooRequestError, reply ? reply->errorMessage : "");
         }
     };
 
@@ -1287,6 +1309,8 @@ bool SonobusAudioProcessor::connectToServer(const String & host, int port, const
 #endif
 
     mCurrentUsername = username;
+    mRemoteLogHost = host;
+    mRemoteLogPort = port;
 
     if (retval != kAooOk) {
         DBG("Error connecting to server: " << retval);
@@ -1470,6 +1494,12 @@ bool SonobusAudioProcessor::joinServerGroup(const String & group, const String &
             obj->mCurrentJoinedGroupId = r->groupId;
             // TODO grab more of the group info
             obj->mCurrentUserId = r->userId;
+
+            if (r->relayAddress) {
+                 SONO_LOG("Joined group with RELAY: " << r->relayAddress->hostName << ":" << r->relayAddress->port);
+            } else {
+                 SONO_LOG("Joined group NO RELAY");
+            }
 
             obj->setupCommonAooSource();
             
@@ -3771,7 +3801,8 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             RemotePeer * peer = findRemotePeer(es, sinkId);
             if (peer) {
                 AooFormatStorage f;
-                if (peer->oursink->getSourceFormat(e->endpoint, f) == kAooOk) {
+                auto gserr = peer->oursink->getSourceFormat(e->endpoint, f);
+                if (gserr == kAooOk) {
                     DBG("Got source format event from " << es->ipaddr << ":" << es->port << "  " <<  e->endpoint.id  << "  channels: " << f.header.numChannels);
                     peer->recvMeterSource.resize(f.header.numChannels, meterRmsWindow);
                     
@@ -3896,12 +3927,22 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                 
                 if (peer->recvActive && peer->recvChannels == 0) {
                     AooFormatStorage f;
-                    if (peer->oursink->getSourceFormat(e->endpoint, f) == kAooOk) {
+                    auto gserr = peer->oursink->getSourceFormat(e->endpoint, f);
+                    if (gserr == kAooOk) {
                         const ScopedWriteLock slw (peer->sinkLock);
                         peer->recvChannels = std::min(MAX_PANNERS, f.header.numChannels);
+                        DBG("Stream active, initialized channels from getSourceFormat: " << peer->recvChannels);
                         int sinkchan = std::max(getMainBusNumOutputChannels(), peer->recvChannels);
                         peer->oursink->setup(sinkchan, getSampleRate(), currSamplesPerBlock, 0);
                         peer->recvMeterSource.resize (peer->recvChannels, meterRmsWindow);
+                        
+                        peer->chanGroups[0].params.numChannels = peer->recvChannels;
+                        peer->numChanGroups = 1;
+                        if (peer->recvChannels == 1) {
+                            peer->viewExpanded = false;
+                        }
+                    } else {
+                        DBG("Stream active but getSourceFormat failed with error: " << gserr);
                     }
                 }
 
@@ -6251,6 +6292,8 @@ void SonobusAudioProcessor::setupSourceFormat(SonobusAudioProcessor::RemotePeer 
     AooFormatStorage f;
     int channels = latencymode ? 1  :  peer ? peer->sendChannels :  mSendChannels.get() <= 0 ?  mActiveSendChannels : mSendChannels.get();
     
+    SONO_LOG("setupSourceFormat: channels=" << channels << " peer=" << (peer ? "remote" : "common") << " codec=" << info.name);
+
     if (formatInfoToAooFormat(info, channels, f)) {        
         source->setFormat(f.header);
 
@@ -6936,6 +6979,7 @@ void SonobusAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBloc
     for (int cgi=0; cgi < mInputChannelGroupCount && cgi < MAX_CHANGROUPS ; ++cgi) {
         totsendchans += mInputChannelGroups[cgi].params.numChannels;
     }
+    DBG("prepareToPlay: totsendchans=" << totsendchans << " mSendChannels=" << mSendChannels.get());
     // plus a possible metronome send
     if (mSendMet.get()) {
         totsendchans += 1;
@@ -9718,6 +9762,38 @@ void AooServerWrapper::handleUdpReceive(int e, const aoo::ip_address& addr,
     } else {
         DBG("AooServer: UDP error: " << aoo::socket_strerror(e));
         // TODO handle error?
+    }
+}
+
+void remote_log_helper(const String& msg) {
+    if (g_activeProcessor) g_activeProcessor->logToRemote(msg);
+}
+
+void SonobusAudioProcessor::logToRemote(const String& msg)
+{
+    String host = mRemoteLogHost.isNotEmpty() ? mRemoteLogHost : "127.0.0.1";
+    int port = mRemoteLogPort > 0 ? mRemoteLogPort : 7078;
+
+    String user = mCurrentUsername.isNotEmpty() ? mCurrentUsername : "unknown";
+    String fullMsg = "[SONOLOG][" + user + "] " + msg;
+    
+    if (mLogSocket < 0) {
+        // Create a dual-stack UDP socket for logging
+        mLogSocket = aoo::socket_udp(0);
+        if (mLogSocket >= 0) {
+            // Set reasonable buffer sizes
+            aoo::socket_set_sendbufsize(mLogSocket, 65536);
+        }
+    }
+
+    if (mLogSocket >= 0) {
+        aoo::ip_address addr(host.toStdString(), port, aoo::ip_address::Unspec);
+        int sent = aoo::socket_sendto(mLogSocket, (const AooByte*)fullMsg.toRawUTF8(), (AooSize)fullMsg.getNumBytesAsUTF8(), addr);
+        
+        if (sent <= 0) {
+            // Only print local error if it's not a background flood
+            // std::cout << "[SONO-REMOTE-ERR] Failed to send log to " << host << ":" << port << " error: " << sent << std::endl;
+        }
     }
 }
 
