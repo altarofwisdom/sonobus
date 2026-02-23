@@ -71,7 +71,7 @@ void handle_udp_receive(aoo::udp_server* server, int e, const aoo::ip_address& a
     */
 
     if (g_loglevel >= kAooLogLevelVerbose) {
-         std::cout << "UDP received " << size << " bytes from " << addr << std::endl;
+         // std::cout << "UDP received " << size << " bytes from " << addr << std::endl;
     }
     if (e == 0) {
         if (size > 9 && !memcmp(data, "[SONOLOG]", 9)) {
@@ -85,7 +85,7 @@ void handle_udp_receive(aoo::udp_server* server, int e, const aoo::ip_address& a
                 auto* srv = static_cast<aoo::udp_server*>(user);
                 aoo::ip_address addr((const struct sockaddr *)address, addrlen);
                 if (g_loglevel >= kAooLogLevelVerbose) {
-                     std::cout << "UDP sending " << size << " bytes to " << addr << std::endl;
+                     // std::cout << "UDP sending " << size << " bytes to " << addr << std::endl;
                 }
                 return srv->send(addr, data, size);
             }, server);
