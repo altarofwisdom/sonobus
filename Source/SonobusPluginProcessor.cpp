@@ -2570,15 +2570,12 @@ void SonobusAudioProcessor::updateSafetyMuting(RemotePeer * peer)
 void SonobusAudioProcessor::doReceiveData()
 {
     // receive from udp port, and parse packet
-    AooByte buf[AOO_MAX_PACKET_SIZE];
-
-    //int nbytes = mUdpSocket->read(buf, AOO_MAXPACKETSIZE, false, senderIP, senderPort);
+    AooByte buf[65536]; // Use max UDP size to prevent truncation of large state packets
 
     aoo::ip_address addr;
     int32_t addrlen = aoo::ip_address::max_length;
     double timeoutsec = 0.02; // 20 ms
-    //int nbytes = mUdpSocket->read(buf, AOO_MAXPACKETSIZE, false, addr.address_ptr(), addrlen);
-    int nbytes = socket_receive(mUdpSocketHandle, buf, AOO_MAX_PACKET_SIZE, &addr, timeoutsec);
+    int nbytes = socket_receive(mUdpSocketHandle, buf, sizeof(buf), &addr, timeoutsec);
 
     if (nbytes == 0) return; // timeout
     else if (nbytes < 0) {
@@ -2586,34 +2583,28 @@ void SonobusAudioProcessor::doReceiveData()
         return;
     }
 
-    //*addr.length_ptr() = addrlen;
-
     // find endpoint from sender info
     EndpointState * endpoint = findOrAddEndpoint(addr);
     
     endpoint->recvBytes += nbytes + UDP_OVERHEAD_BYTES;
 
     // TODO - handle possible OSC bundles
+    AooError aooErr = kAooErrorNone;
     bool aoohandled = false;
 
     if (mAooClient) {
         // AoO message
         const ScopedReadLock sl (mCoreLock);
 
-        aoohandled = mAooClient->handleMessage(buf, nbytes, addr.address(), addr.length()) == kAooOk;
+        aooErr = mAooClient->handleMessage(buf, nbytes, addr.address(), addr.length());
+        aoohandled = (aooErr == kAooOk);
 
         if (aoohandled) {
-
             if (auto * remote = findRemotePeer(endpoint, -1)) {
-                // todo - remote->dataPacketsReceived += 1;
-                //if (remote->recvAllow && !remote->recvActive) {
-                //    remote->recvActive = true;
-                //}
                 if (remote->resetSafetyMuted) {
                     updateSafetyMuting(remote);
                 }
             }
-
             // notify send thread
             notifySendThread();
         }
@@ -2625,10 +2616,9 @@ void SonobusAudioProcessor::doReceiveData()
         }
         else {
             // not a valid AoO OSC message
-            DBG("SonoBus: not a valid AOO message! : " << buf[0] << buf[1] << buf[2] << buf[3]);
+            DBG("SonoBus: not a valid AOO message! (AooErr: " << aooErr << ") from " << addr.name_unmapped() << ":" << addr.port() << " size: " << nbytes << " hex: " << String::toHexString(buf, std::min(nbytes, 16)));
         }
     }
-
 }
 
 // XXX
