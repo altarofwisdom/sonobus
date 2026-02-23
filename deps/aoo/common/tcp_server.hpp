@@ -42,6 +42,7 @@ public:
                                                const AooByte *data, AooSize size)>;
 
     void start(int port, accept_handler accept, receive_handler receive);
+    void start(const aoo::ip_address& addr, accept_handler accept, receive_handler receive);
     void run();
     void stop();
     void notify();
@@ -49,6 +50,7 @@ public:
     int send(AooId client, const AooByte *data, AooSize size);
     bool close(AooId client);
     int client_count() const { return client_count_; }
+    const aoo::ip_address& address() const { return bind_addr_; }
 private:
     struct client {
         ip_address address;
@@ -68,6 +70,7 @@ private:
 
     int listen_socket_ = invalid_socket;
     int event_socket_ = invalid_socket;
+    aoo::ip_address bind_addr_;
     int last_error_ = 0;
     std::atomic<bool> running_{false};
 

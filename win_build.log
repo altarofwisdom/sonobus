@@ -1,0 +1,209 @@
+Build Windows	Set up job	﻿2026-02-21T16:17:35.2414286Z Current runner version: '2.331.0'
+Build Windows	Set up job	2026-02-21T16:17:35.2464641Z Runner name: '1360P-W11'
+Build Windows	Set up job	2026-02-21T16:17:35.2466028Z Runner group name: 'default'
+Build Windows	Set up job	2026-02-21T16:17:35.2467312Z Machine name: '1360P-W11'
+Build Windows	Set up job	2026-02-21T16:17:35.2479734Z ##[group]GITHUB_TOKEN Permissions
+Build Windows	Set up job	2026-02-21T16:17:35.2492228Z Contents: read
+Build Windows	Set up job	2026-02-21T16:17:35.2495623Z Metadata: read
+Build Windows	Set up job	2026-02-21T16:17:35.2496581Z Packages: read
+Build Windows	Set up job	2026-02-21T16:17:35.2497509Z ##[endgroup]
+Build Windows	Set up job	2026-02-21T16:17:35.2511466Z Secret source: Actions
+Build Windows	Set up job	2026-02-21T16:17:35.2516863Z Prepare workflow directory
+Build Windows	Set up job	2026-02-21T16:17:35.4730789Z Prepare all required actions
+Build Windows	Set up job	2026-02-21T16:17:35.4836294Z Getting action download info
+Build Windows	Set up job	2026-02-21T16:19:15.5884357Z Failed to resolve action download info. Error: The HTTP request timed out after 00:01:40.
+Build Windows	Set up job	2026-02-21T16:19:15.5922949Z Retrying in 21,035 seconds
+Build Windows	Set up job	2026-02-21T16:19:38.2270453Z Download action repository 'actions/checkout@v4' (SHA:34e114876b0b11c390a56381ad16ebd13914f8d5)
+Build Windows	Set up job	2026-02-21T16:19:39.4658702Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Build Windows	Set up job	2026-02-21T16:19:41.7083800Z Complete job name: Build Windows
+Build Windows	Checkout	﻿2026-02-21T16:19:42.0267044Z ##[group]Run actions/checkout@v4
+Build Windows	Checkout	2026-02-21T16:19:42.0269640Z with:
+Build Windows	Checkout	2026-02-21T16:19:42.0270445Z   repository: altarofwisdom/sonobus
+Build Windows	Checkout	2026-02-21T16:19:42.0274941Z   token: ***
+Build Windows	Checkout	2026-02-21T16:19:42.0279928Z   ssh-strict: true
+Build Windows	Checkout	2026-02-21T16:19:42.0281746Z   ssh-user: git
+Build Windows	Checkout	2026-02-21T16:19:42.0282861Z   persist-credentials: true
+Build Windows	Checkout	2026-02-21T16:19:42.0283708Z   clean: true
+Build Windows	Checkout	2026-02-21T16:19:42.0284423Z   sparse-checkout-cone-mode: true
+Build Windows	Checkout	2026-02-21T16:19:42.0285290Z   fetch-depth: 1
+Build Windows	Checkout	2026-02-21T16:19:42.0286021Z   fetch-tags: false
+Build Windows	Checkout	2026-02-21T16:19:42.0286724Z   show-progress: true
+Build Windows	Checkout	2026-02-21T16:19:42.0287415Z   lfs: false
+Build Windows	Checkout	2026-02-21T16:19:42.0288076Z   submodules: false
+Build Windows	Checkout	2026-02-21T16:19:42.0288805Z   set-safe-directory: true
+Build Windows	Checkout	2026-02-21T16:19:42.0290932Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:43.1005794Z Syncing repository: altarofwisdom/sonobus
+Build Windows	Checkout	2026-02-21T16:19:43.1015838Z ##[group]Getting Git version info
+Build Windows	Checkout	2026-02-21T16:19:43.1017869Z Working directory is 'C:\actions-runner\_work\sonobus\sonobus'
+Build Windows	Checkout	2026-02-21T16:19:43.4932791Z [command]"C:\Program Files\Git\cmd\git.exe" version
+Build Windows	Checkout	2026-02-21T16:19:43.5981637Z git version 2.51.0.windows.1
+Build Windows	Checkout	2026-02-21T16:19:43.6218678Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:43.6276432Z Copying 'C:\Users\yoto\.gitconfig' to 'C:\actions-runner\_work\_temp\1dc2d32a-56a0-46ae-92cd-6f969cf57630\.gitconfig'
+Build Windows	Checkout	2026-02-21T16:19:43.6373054Z Temporarily overriding HOME='C:\actions-runner\_work\_temp\1dc2d32a-56a0-46ae-92cd-6f969cf57630' before making global git config changes
+Build Windows	Checkout	2026-02-21T16:19:43.6374813Z Adding repository directory to the temporary git global config as a safe directory
+Build Windows	Checkout	2026-02-21T16:19:43.6419134Z [command]"C:\Program Files\Git\cmd\git.exe" config --global --add safe.directory C:\actions-runner\_work\sonobus\sonobus
+Build Windows	Checkout	2026-02-21T16:19:43.7734971Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --get remote.origin.url
+Build Windows	Checkout	2026-02-21T16:19:43.8793751Z https://github.com/altarofwisdom/sonobus
+Build Windows	Checkout	2026-02-21T16:19:43.9003624Z ##[group]Removing previously created refs, to avoid conflicts
+Build Windows	Checkout	2026-02-21T16:19:43.9032491Z [command]"C:\Program Files\Git\cmd\git.exe" rev-parse --symbolic-full-name --verify --quiet HEAD
+Build Windows	Checkout	2026-02-21T16:19:44.0151909Z refs/heads/aoofreshest
+Build Windows	Checkout	2026-02-21T16:19:44.0327952Z [command]"C:\Program Files\Git\cmd\git.exe" checkout --detach
+Build Windows	Checkout	2026-02-21T16:19:44.3428313Z HEAD is now at b8042ac fix: correct Rectangle scope across all platforms
+Build Windows	Checkout	2026-02-21T16:19:44.5968975Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:44.6001667Z [command]"C:\Program Files\Git\cmd\git.exe" submodule status
+Build Windows	Checkout	2026-02-21T16:19:46.6756458Z -6b6035ae4a29abbd237463d84a45fbeb0d92bc18 deps/aoo/deps/opus
+Build Windows	Checkout	2026-02-21T16:19:46.7081916Z ##[group]Cleaning the repository
+Build Windows	Checkout	2026-02-21T16:19:46.7104690Z [command]"C:\Program Files\Git\cmd\git.exe" clean -ffdx
+Build Windows	Checkout	2026-02-21T16:19:47.9002936Z Removing build/
+Build Windows	Checkout	2026-02-21T16:19:47.9215392Z [command]"C:\Program Files\Git\cmd\git.exe" reset --hard HEAD
+Build Windows	Checkout	2026-02-21T16:19:49.4702822Z HEAD is now at b8042ac fix: correct Rectangle scope across all platforms
+Build Windows	Checkout	2026-02-21T16:19:49.4883222Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:49.5262862Z ##[group]Disabling automatic garbage collection
+Build Windows	Checkout	2026-02-21T16:19:49.5297888Z [command]"C:\Program Files\Git\cmd\git.exe" config --local gc.auto 0
+Build Windows	Checkout	2026-02-21T16:19:49.6479312Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:49.6480042Z ##[group]Setting up auth
+Build Windows	Checkout	2026-02-21T16:19:49.6533746Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Build Windows	Checkout	2026-02-21T16:19:49.7782119Z [command]"C:\Program Files\Git\cmd\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Build Windows	Checkout	2026-02-21T16:19:51.9873759Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Build Windows	Checkout	2026-02-21T16:19:52.1239664Z [command]"C:\Program Files\Git\cmd\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Build Windows	Checkout	2026-02-21T16:19:54.3207119Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+Build Windows	Checkout	2026-02-21T16:19:54.4378433Z [command]"C:\Program Files\Git\cmd\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+Build Windows	Checkout	2026-02-21T16:19:56.5810688Z [command]"C:\Program Files\Git\cmd\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+Build Windows	Checkout	2026-02-21T16:19:56.7320688Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:56.7322867Z ##[group]Fetching the repository
+Build Windows	Checkout	2026-02-21T16:19:56.7373981Z [command]"C:\Program Files\Git\cmd\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +3e3aa1f665f0e61e24f5bffcffca9ba5c7771f96:refs/remotes/origin/aoofreshest
+Build Windows	Checkout	2026-02-21T16:19:58.8694769Z From https://github.com/altarofwisdom/sonobus
+Build Windows	Checkout	2026-02-21T16:19:58.8697070Z  + b8042ac...3e3aa1f 3e3aa1f665f0e61e24f5bffcffca9ba5c7771f96 -> origin/aoofreshest  (forced update)
+Build Windows	Checkout	2026-02-21T16:19:58.9535010Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:58.9538536Z ##[group]Determining the checkout info
+Build Windows	Checkout	2026-02-21T16:19:58.9546711Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:58.9584008Z [command]"C:\Program Files\Git\cmd\git.exe" sparse-checkout disable
+Build Windows	Checkout	2026-02-21T16:19:59.1434081Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --unset-all extensions.worktreeConfig
+Build Windows	Checkout	2026-02-21T16:19:59.2714848Z ##[group]Checking out the ref
+Build Windows	Checkout	2026-02-21T16:19:59.2741038Z [command]"C:\Program Files\Git\cmd\git.exe" checkout --progress --force -B aoofreshest refs/remotes/origin/aoofreshest
+Build Windows	Checkout	2026-02-21T16:19:59.6571618Z branch 'aoofreshest' set up to track 'origin/aoofreshest'.
+Build Windows	Checkout	2026-02-21T16:19:59.6573996Z Your branch is up to date with 'origin/aoofreshest'.
+Build Windows	Checkout	2026-02-21T16:19:59.6615289Z Previous HEAD position was b8042ac fix: correct Rectangle scope across all platforms
+Build Windows	Checkout	2026-02-21T16:19:59.6616990Z Switched to and reset branch 'aoofreshest'
+Build Windows	Checkout	2026-02-21T16:19:59.6796904Z ##[endgroup]
+Build Windows	Checkout	2026-02-21T16:19:59.8270874Z [command]"C:\Program Files\Git\cmd\git.exe" log -1 --format=%H
+Build Windows	Checkout	2026-02-21T16:19:59.9497917Z 3e3aa1f665f0e61e24f5bffcffca9ba5c7771f96
+Build Windows	Checkout ASIO SDK	﻿2026-02-21T16:20:00.1235211Z ##[group]Run if (Test-Path ../asiosdk) { Remove-Item -Recurse -Force ../asiosdk }
+Build Windows	Checkout ASIO SDK	2026-02-21T16:20:00.1237501Z [36;1mif (Test-Path ../asiosdk) { Remove-Item -Recurse -Force ../asiosdk }[0m
+Build Windows	Checkout ASIO SDK	2026-02-21T16:20:00.1239338Z [36;1mgit clone --depth 1 https://github.com/audiosdk/asio.git ../asiosdk[0m
+Build Windows	Checkout ASIO SDK	2026-02-21T16:20:00.1474811Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+Build Windows	Checkout ASIO SDK	2026-02-21T16:20:00.1475740Z ##[endgroup]
+Build Windows	Checkout ASIO SDK	2026-02-21T16:20:01.8632357Z Cloning into '../asiosdk'...
+Build Windows	Configure CMake	﻿2026-02-21T16:20:03.6616586Z ##[group]Run if (Test-Path build) { Remove-Item -Recurse -Force build }
+Build Windows	Configure CMake	2026-02-21T16:20:03.6622383Z [36;1mif (Test-Path build) { Remove-Item -Recurse -Force build }[0m
+Build Windows	Configure CMake	2026-02-21T16:20:03.6624245Z [36;1mcmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release[0m
+Build Windows	Configure CMake	2026-02-21T16:20:03.6789450Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+Build Windows	Configure CMake	2026-02-21T16:20:03.6790323Z ##[endgroup]
+Build Windows	Configure CMake	2026-02-21T16:20:04.9786078Z -- Selecting Windows SDK version 10.0.26100.0 to target Windows 10.0.26200.
+Build Windows	Configure CMake	2026-02-21T16:20:09.5798273Z -- The C compiler identification is MSVC 19.33.31424.0
+Build Windows	Configure CMake	2026-02-21T16:20:12.5736152Z -- The CXX compiler identification is MSVC 19.33.31424.0
+Build Windows	Configure CMake	2026-02-21T16:20:12.7602627Z -- Detecting C compiler ABI info
+Build Windows	Configure CMake	2026-02-21T16:20:16.2766849Z -- Detecting C compiler ABI info - done
+Build Windows	Configure CMake	2026-02-21T16:20:16.6769877Z -- Check for working C compiler: C:/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.33.31424/bin/Hostx64/x64/cl.exe - skipped
+Build Windows	Configure CMake	2026-02-21T16:20:16.6790673Z -- Detecting C compile features
+Build Windows	Configure CMake	2026-02-21T16:20:16.6817686Z -- Detecting C compile features - done
+Build Windows	Configure CMake	2026-02-21T16:20:16.7462053Z -- Detecting CXX compiler ABI info
+Build Windows	Configure CMake	2026-02-21T16:20:20.2386326Z -- Detecting CXX compiler ABI info - done
+Build Windows	Configure CMake	2026-02-21T16:20:20.6379175Z -- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Preview/VC/Tools/MSVC/14.33.31424/bin/Hostx64/x64/cl.exe - skipped
+Build Windows	Configure CMake	2026-02-21T16:20:20.6394870Z -- Detecting CXX compile features
+Build Windows	Configure CMake	2026-02-21T16:20:20.6440853Z -- Detecting CXX compile features - done
+Build Windows	Configure CMake	2026-02-21T16:20:20.6843739Z CMake Deprecation Warning at deps/aoo/CMakeLists.txt:1 (cmake_minimum_required):
+Build Windows	Configure CMake	2026-02-21T16:20:20.6847462Z   Compatibility with CMake < 3.10 will be removed from a future version of
+Build Windows	Configure CMake	2026-02-21T16:20:20.6849123Z -- Project: aoo
+Build Windows	Configure CMake	2026-02-21T16:20:20.6850137Z   CMake.
+Build Windows	Configure CMake	2026-02-21T16:20:20.6850936Z 
+Build Windows	Configure CMake	2026-02-21T16:20:20.6853216Z   Update the VERSION argument <min> value.  Or, use the <min>...<max> syntax
+Build Windows	Configure CMake	2026-02-21T16:20:20.6856282Z   to tell CMake that the project requires at least <min> but has been updated
+Build Windows	Configure CMake	2026-02-21T16:20:20.6858485Z   to work with policies introduced by <max> or earlier.
+Build Windows	Configure CMake	2026-02-21T16:20:20.6859836Z 
+Build Windows	Configure CMake	2026-02-21T16:20:20.6859907Z 
+Build Windows	Configure CMake	2026-02-21T16:20:20.7233308Z -- Opus library: opus
+Build Windows	Configure CMake	2026-02-21T16:20:20.7235067Z -- 
+Build Windows	Configure CMake	2026-02-21T16:20:20.7236293Z *** Global settings ***
+Build Windows	Configure CMake	2026-02-21T16:20:20.7236928Z 
+Build Windows	Configure CMake	2026-02-21T16:20:20.7237756Z -- CMAKE_CXX_COMPILER_ID: MSVC
+Build Windows	Configure CMake	2026-02-21T16:20:20.7238985Z -- Build type: Release
+Build Windows	Configure CMake	2026-02-21T16:20:20.7240361Z -- CMAKE_INSTALL_PREFIX: C:/Program Files/SonoBus
+Build Windows	Configure CMake	2026-02-21T16:20:20.7242089Z -- Log level: Warning
+Build Windows	Configure CMake	2026-02-21T16:20:20.7243019Z -- No built-in support for atomic doubles - will be emulated in software
+Build Windows	Configure CMake	2026-02-21T16:20:20.7245985Z -- No built-in support for atomic 64-bit integers - will be emulated in software
+Build Windows	Configure CMake	2026-02-21T16:20:20.7248207Z -- Use Opus codec: ON
+Build Windows	Configure CMake	2026-02-21T16:20:20.7249120Z -- Use AOO NET: ON
+Build Windows	Configure CMake	2026-02-21T16:20:20.7322966Z -- 
+Build Windows	Configure CMake	2026-02-21T16:20:20.7323940Z *** AOO library ***
+Build Windows	Configure CMake	2026-02-21T16:20:20.7324416Z 
+Build Windows	Configure CMake	2026-02-21T16:20:20.7350043Z -- Use custom allocator: OFF
+Build Windows	Configure CMake	2026-02-21T16:20:20.7351451Z -- Default UDP packet size: 512
+Build Windows	Configure CMake	2026-02-21T16:20:20.7352455Z -- Max. UDP packet size: 4096
+Build Windows	Configure CMake	2026-02-21T16:20:20.7353346Z -- Use dynamic resampling: OFF
+Build Windows	Configure CMake	2026-02-21T16:20:20.7354349Z -- Default DLL filter bandwidth: 0.0001
+Build Windows	Configure CMake	2026-02-21T16:20:20.7355310Z -- Use binary data message: ON
+Build Windows	Configure CMake	2026-02-21T16:20:20.7417502Z -- 
+Build Windows	Configure CMake	2026-02-21T16:20:20.7417911Z *** AOO server ***
+Build Windows	Configure CMake	2026-02-21T16:20:20.7418290Z 
+Build Windows	Configure CMake	2026-02-21T16:20:21.2624761Z -- Configuring juceaide
+Build Windows	Configure CMake	2026-02-21T16:20:35.9027556Z -- Building juceaide
+Build Windows	Configure CMake	2026-02-21T16:21:13.8069596Z -- Exporting juceaide
+Build Windows	Configure CMake	2026-02-21T16:21:15.1823416Z CMake Warning (dev) at deps/juce/extras/Build/CMake/JUCEUtils.cmake:743 (add_custom_command):
+Build Windows	Configure CMake	2026-02-21T16:21:15.1825756Z   The following keywords are not supported when using
+Build Windows	Configure CMake	2026-02-21T16:21:15.1827658Z   add_custom_command(TARGET): DEPENDS.
+Build Windows	Configure CMake	2026-02-21T16:21:15.1828228Z 
+Build Windows	Configure CMake	2026-02-21T16:21:15.1837669Z   Policy CMP0175 is not set: add_custom_command() rejects invalid arguments.
+Build Windows	Configure CMake	2026-02-21T16:21:15.1841391Z   Run "cmake --help-policy CMP0175" for policy details.  Use the cmake_policy
+Build Windows	Configure CMake	2026-02-21T16:21:15.1843030Z   command to set the policy and suppress this warning.
+Build Windows	Configure CMake	2026-02-21T16:21:15.1845841Z Call Stack (most recent call first):
+Build Windows	Configure CMake	2026-02-21T16:21:15.1848397Z   deps/juce/extras/Build/CMake/JUCEUtils.cmake:882 (_juce_create_windows_package)
+Build Windows	Configure CMake	2026-02-21T16:21:15.1851533Z   deps/juce/extras/Build/CMake/JUCEUtils.cmake:1088 (_juce_set_plugin_target_properties)
+Build Windows	Configure CMake	2026-02-21T16:21:15.1854371Z   deps/juce/extras/Build/CMake/JUCEUtils.cmake:1226 (_juce_link_plugin_wrapper)
+Build Windows	Configure CMake	2026-02-21T16:21:15.1857144Z   deps/juce/extras/Build/CMake/JUCEUtils.cmake:1767 (_juce_configure_plugin_targets)
+Build Windows	Configure CMake	2026-02-21T16:21:15.1858898Z   CMakeLists.txt:172 (juce_add_plugin)
+Build Windows	Configure CMake	2026-02-21T16:21:15.1860290Z   CMakeLists.txt:641 (sono_add_custom_plugin_target)
+Build Windows	Configure CMake	2026-02-21T16:21:15.1861773Z This warning is for project developers.  Use -Wno-dev to suppress it.
+Build Windows	Configure CMake	2026-02-21T16:21:15.1863217Z 
+Build Windows	Configure CMake	2026-02-21T16:21:15.1864285Z -- Win generator platform is: x64
+Build Windows	Configure CMake	2026-02-21T16:21:15.9551536Z CMake Warning (dev) at deps/juce/extras/Build/CMake/JUCEUtils.cmake:743 (add_custom_command):
+Build Windows	Configure CMake	2026-02-21T16:21:15.9554678Z   The following keywords are not supported when using
+Build Windows	Configure CMake	2026-02-21T16:21:15.9556039Z   add_custom_command(TARGET): DEPENDS.
+Build Windows	Configure CMake	2026-02-21T16:21:15.9556646Z 
+Build Windows	Configure CMake	2026-02-21T16:21:15.9557476Z   Policy CMP0175 is not set: add_custom_command() rejects invalid arguments.
+Build Windows	Configure CMake	2026-02-21T16:21:15.9559266Z   Run "cmake --help-policy CMP0175" for policy details.  Use the cmake_policy
+Build Windows	Configure CMake	2026-02-21T16:21:15.9561165Z   command to set the policy and suppress this warning.
+Build Windows	Configure CMake	2026-02-21T16:21:15.9561822Z Call Stack (most recent call first):
+Build Windows	Configure CMake	2026-02-21T16:21:15.9564028Z   deps/juce/extras/Build/CMake/JUCEUtils.cmake:882 (_juce_create_windows_package)
+Build Windows	Configure CMake	2026-02-21T16:21:15.9566248Z   deps/juce/extras/Build/CMake/JUCEUtils.cmake:1088 (_juce_set_plugin_target_properties)
+Build Windows	Configure CMake	2026-02-21T16:21:15.9568495Z   deps/juce/extras/Build/CMake/JUCEUtils.cmake:1226 (_juce_link_plugin_wrapper)
+Build Windows	Configure CMake	2026-02-21T16:21:15.9570549Z   deps/juce/extras/Build/CMake/JUCEUtils.cmake:1767 (_juce_configure_plugin_targets)
+Build Windows	Configure CMake	2026-02-21T16:21:15.9571983Z   CMakeLists.txt:172 (juce_add_plugin)
+Build Windows	Configure CMake	2026-02-21T16:21:15.9573245Z   CMakeLists.txt:647 (sono_add_custom_plugin_target)
+Build Windows	Configure CMake	2026-02-21T16:21:15.9575534Z This warning is for project developers.  Use -Wno-dev to suppress it.
+Build Windows	Configure CMake	2026-02-21T16:21:15.9577247Z 
+Build Windows	Configure CMake	2026-02-21T16:21:15.9577940Z -- Win generator platform is: x64
+Build Windows	Configure CMake	2026-02-21T16:21:16.0859002Z -- Configuring done (71.2s)
+Build Windows	Configure CMake	2026-02-21T16:21:20.9117701Z -- Generating done (4.8s)
+Build Windows	Configure CMake	2026-02-21T16:21:21.0237349Z -- Build files have been written to: C:/actions-runner/_work/sonobus/sonobus/build
+Build Windows	Post Checkout	﻿2026-02-21T16:23:24.5330087Z Post job cleanup.
+Build Windows	Post Checkout	2026-02-21T16:23:25.4288609Z [command]"C:\Program Files\Git\cmd\git.exe" version
+Build Windows	Post Checkout	2026-02-21T16:23:25.5481176Z git version 2.51.0.windows.1
+Build Windows	Post Checkout	2026-02-21T16:23:25.5767751Z Copying 'C:\Users\yoto\.gitconfig' to 'C:\actions-runner\_work\_temp\be3d6fc3-efd7-4d17-b27b-d2888aa87cc4\.gitconfig'
+Build Windows	Post Checkout	2026-02-21T16:23:25.5878054Z Temporarily overriding HOME='C:\actions-runner\_work\_temp\be3d6fc3-efd7-4d17-b27b-d2888aa87cc4' before making global git config changes
+Build Windows	Post Checkout	2026-02-21T16:23:25.5883981Z Adding repository directory to the temporary git global config as a safe directory
+Build Windows	Post Checkout	2026-02-21T16:23:25.5912635Z [command]"C:\Program Files\Git\cmd\git.exe" config --global --add safe.directory C:\actions-runner\_work\sonobus\sonobus
+Build Windows	Post Checkout	2026-02-21T16:23:25.7309840Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Build Windows	Post Checkout	2026-02-21T16:23:25.8708470Z [command]"C:\Program Files\Git\cmd\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Build Windows	Post Checkout	2026-02-21T16:23:28.0464267Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Build Windows	Post Checkout	2026-02-21T16:23:28.1718381Z http.https://github.com/.extraheader
+Build Windows	Post Checkout	2026-02-21T16:23:28.1875690Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --unset-all http.https://github.com/.extraheader
+Build Windows	Post Checkout	2026-02-21T16:23:28.3251891Z [command]"C:\Program Files\Git\cmd\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Build Windows	Post Checkout	2026-02-21T16:23:30.4919855Z [command]"C:\Program Files\Git\cmd\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+Build Windows	Post Checkout	2026-02-21T16:23:30.6260059Z [command]"C:\Program Files\Git\cmd\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+Build Windows	Complete job	﻿2026-02-21T16:23:32.8667736Z Cleaning up orphan processes
+Build Windows	Complete job	2026-02-21T16:23:32.9303031Z Terminate orphan process: pid (60596) (vctip)
+Build Windows	Complete job	2026-02-21T16:23:32.9516124Z Terminate orphan process: pid (51304) (mspdbsrv)
+Build Windows	Complete job	2026-02-21T16:23:32.9664907Z Terminate orphan process: pid (23300) (MSBuild)
+Build Windows	Complete job	2026-02-21T16:23:32.9831716Z Terminate orphan process: pid (30368) (MSBuild)
+Build Windows	Complete job	2026-02-21T16:23:32.9979072Z Terminate orphan process: pid (72756) (conhost)

@@ -40,6 +40,7 @@ public:
     ~udp_server();
 
     int port() const { return bind_addr_.port(); }
+    const aoo::ip_address& address() const { return bind_addr_; }
     int socket() const { return socket_; }
     aoo::ip_address::ip_type type() const { return bind_addr_.type(); }
 
@@ -55,6 +56,7 @@ public:
     }
 
     void start(int port, receive_handler receive, bool threaded = false);
+    void start(const aoo::ip_address& addr, receive_handler receive, bool threaded = false);
     void run(double timeout = -1);
     void stop();
     void notify();

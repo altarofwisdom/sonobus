@@ -4383,6 +4383,15 @@ void SonobusAudioProcessor::handleEvents()
     const ScopedReadLock sl (mCoreLock);        
     int32_t dummy = 0;
 
+    static int counter = 0;
+    if (++counter > 100) { // ~2 seconds
+        counter = 0;
+        for (int i=0; i < mRemotePeers.size(); ++i) {
+             auto* peer = mRemotePeers.getUnchecked(i);
+             DBG("Peer " << i << " (" << peer->userName << ") recvChannels: " << peer->recvChannels << " active: " << peer->recvActive << " connected: " << peer->connected);
+        }
+    }
+
 #if 1
     if (mAooCommonSource->eventsAvailable() > 0) {
         mAooCommonSource->pollEvents();

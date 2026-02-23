@@ -13,6 +13,14 @@
 namespace aoo {
 
 void tcp_server::start(int port, accept_handler accept, receive_handler receive) {
+#if AOO_USE_IPv6
+    start(ip_address(port, ip_address::IPv6), std::move(accept), std::move(receive));
+#else
+    start(ip_address(port, ip_address::IPv4), std::move(accept), std::move(receive));
+#endif
+}
+
+void tcp_server::start(const aoo::ip_address& addr, accept_handler accept, receive_handler receive) {
     accept_handler_ = std::move(accept);
     receive_handler_ = std::move(receive);
 
@@ -23,7 +31,7 @@ void tcp_server::start(int port, accept_handler accept, receive_handler receive)
                                  + socket_strerror(e));
     }
 
-    listen_socket_ = socket_tcp(port);
+    listen_socket_ = socket_tcp(addr);
     if (listen_socket_ < 0) {
         // cache errno
         auto e = socket_errno();
@@ -32,6 +40,15 @@ void tcp_server::start(int port, accept_handler accept, receive_handler receive)
         throw std::runtime_error("couldn't create/bind TCP socket: "
                                  + socket_strerror(e));
     }
+
+    // cache bound address
+    if (socket_address(listen_socket_, bind_addr_) < 0) {
+        auto e = socket_errno(); // cache error
+        socket_close(event_socket_);
+        socket_close(listen_socket_);
+        throw std::runtime_error("couldn't get socket address: " + socket_strerror(e));
+    }
+
     // listen
     if (listen(listen_socket_, SOMAXCONN) < 0){
         // cache errno
@@ -54,7 +71,7 @@ void tcp_server::start(int port, accept_handler accept, receive_handler receive)
     poll_array_[event_index].revents = 0;
     poll_array_[event_index].fd = event_socket_;
 
-    LOG_DEBUG("tcp_server: start listening on port " << port);
+    LOG_DEBUG("tcp_server: start listening on " << bind_addr_);
 }
 
 void tcp_server::run() {

@@ -5,11 +5,19 @@
 namespace aoo {
 
 void udp_server::start(int port, receive_handler receive, bool threaded) {
+#if AOO_USE_IPv6
+    start(ip_address(port, ip_address::IPv6), std::move(receive), threaded);
+#else
+    start(ip_address(port, ip_address::IPv4), std::move(receive), threaded);
+#endif
+}
+
+void udp_server::start(const aoo::ip_address& addr, receive_handler receive, bool threaded) {
     do_close();
 
     receive_handler_ = std::move(receive);
 
-    auto sock = socket_udp(port);
+    auto sock = socket_udp(addr);
     if (sock < 0) {
         auto e = socket_errno();
         throw std::runtime_error("couldn't create/bind UDP socket: " + socket_strerror(e));

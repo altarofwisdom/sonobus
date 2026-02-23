@@ -116,7 +116,11 @@ int socket_init();
 
 int socket_udp(uint16_t port);
 
+int socket_udp(const ip_address& addr);
+
 int socket_tcp(uint16_t port);
+
+int socket_tcp(const ip_address& addr);
 
 enum shutdown_method {
     shutdown_receive = 0,

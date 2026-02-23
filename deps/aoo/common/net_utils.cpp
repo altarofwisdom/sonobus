@@ -605,29 +605,35 @@ void socket_error_print(const char *label)
 int socket_udp(uint16_t port)
 {
 #if AOO_USE_IPv6
-    // prefer IPv6, but fall back to IPv4 if disabled
-    ip_address bindaddr;
-    int sock = socket(AF_INET6, SOCK_DGRAM, 0);
-    if (sock >= 0){
-        bindaddr = ip_address(port, ip_address::IPv6);
-        // make dual stack socket by listening to both IPv4 and IPv6 packets
-        if (socket_set_int_option(sock, IPPROTO_IPV6, IPV6_V6ONLY, false) != 0){
-            fprintf(stderr, "socket_udp: couldn't set IPV6_V6ONLY");
-            fflush(stderr);
-            // TODO: fall back to IPv4?
+    return socket_udp(ip_address(port, ip_address::IPv6));
+#else
+    return socket_udp(ip_address(port, ip_address::IPv4));
+#endif
+}
+
+int socket_udp(const ip_address& bindaddr)
+{
+    int family = bindaddr.address()->sa_family;
+    int sock = socket(family, SOCK_DGRAM, 0);
+    if (sock >= 0) {
+        if (family == AF_INET6) {
+            // make dual stack socket by listening to both IPv4 and IPv6 packets
+            // only if it's a wildcard address
+            if (socket_set_int_option(sock, IPPROTO_IPV6, IPV6_V6ONLY, false) != 0) {
+                // ignore error
+            }
         }
     } else {
-        sock = socket(AF_INET, SOCK_DGRAM, 0);
-        bindaddr = ip_address(port, ip_address::IPv4);
-    }
-#else
-    int sock = socket(AF_INET, SOCK_DGRAM, 0);
-    ip_address bindaddr(port, ip_address::IPv4);
+#if AOO_USE_IPv6
+        if (family == AF_INET6) {
+            // try IPv4
+            return socket_udp(ip_address(bindaddr.port(), ip_address::IPv4));
+        }
 #endif
-    if (sock < 0) {
         socket_error_print("socket_udp");
         return -1;
     }
+
     // finally bind the socket
     if (bind(sock, bindaddr.address(), bindaddr.length()) != 0){
         auto err = socket_errno(); // cache errno
@@ -642,29 +648,34 @@ int socket_udp(uint16_t port)
 int socket_tcp(uint16_t port)
 {
 #if AOO_USE_IPv6
-    // prefer IPv6, but fall back to IPv4 if disabled
-    ip_address bindaddr;
-    int sock = socket(AF_INET6, SOCK_STREAM, 0);
+    return socket_tcp(ip_address(port, ip_address::IPv6));
+#else
+    return socket_tcp(ip_address(port, ip_address::IPv4));
+#endif
+}
+
+int socket_tcp(const ip_address& bindaddr)
+{
+    int family = bindaddr.address()->sa_family;
+    int sock = socket(family, SOCK_STREAM, 0);
     if (sock >= 0) {
-        bindaddr = ip_address(port, ip_address::IPv6);
-        // make dual stack socket by listening to both IPv4 and IPv6 packets
-        if (socket_set_int_option(sock, IPPROTO_IPV6, IPV6_V6ONLY, false)) {
-            fprintf(stderr, "socket_udp: couldn't set IPV6_V6ONLY");
-            fflush(stderr);
-            // TODO: fall back to IPv4?
+        if (family == AF_INET6) {
+            // make dual stack socket by listening to both IPv4 and IPv6 packets
+            if (socket_set_int_option(sock, IPPROTO_IPV6, IPV6_V6ONLY, false) != 0) {
+                // ignore error
+            }
         }
     } else {
-        sock = socket(AF_INET, SOCK_STREAM, 0);
-        bindaddr = ip_address(port, ip_address::IPv4);
-    }
-#else
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
-    ip_address bindaddr = ip_address(port, ip_address::IPv4);
+#if AOO_USE_IPv6
+        if (family == AF_INET6) {
+            // try IPv4
+            return socket_tcp(ip_address(bindaddr.port(), ip_address::IPv4));
+        }
 #endif
-    if (sock < 0){
         socket_error_print("socket_tcp");
         return -1;
     }
+
     // set SO_REUSEADDR
     if (socket_set_int_option(sock, SOL_SOCKET, SO_REUSEADDR, true) != 0) {
         fprintf(stderr, "aoo_client: couldn't set SO_REUSEADDR");
