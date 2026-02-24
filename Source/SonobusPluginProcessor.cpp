@@ -412,6 +412,10 @@ struct SonobusAudioProcessor::RemotePeer {
     bool remoteIsRecording = false;
     bool hasRemoteInfo = false;
     bool blockedUs = false;
+    bool remoteMainSendMuted = false;
+    bool remoteMainRecvMuted = false;
+    bool remoteMainSendMutedKnown = false;
+    bool remoteMainRecvMutedKnown = false;
 
     struct PeerInfo {
         int32_t flags = 0;
@@ -3308,6 +3312,18 @@ void SonobusAudioProcessor::handleRemotePeerInfoUpdate(RemotePeer * peer, const 
         DBG("peerinfo: Got remote recording: " << (int)isrec);
         peer->remoteIsRecording = isrec;
     }
+    if (infodata.hasProperty("sendmute")) {
+        bool muted = infodata.getProperty("sendmute", false);
+        DBG("peerinfo: Got remote main send mute: " << (int)muted);
+        peer->remoteMainSendMuted = muted;
+        peer->remoteMainSendMutedKnown = true;
+    }
+    if (infodata.hasProperty("recvmute")) {
+        bool muted = infodata.getProperty("recvmute", false);
+        DBG("peerinfo: Got remote main recv mute: " << (int)muted);
+        peer->remoteMainRecvMuted = muted;
+        peer->remoteMainRecvMutedKnown = true;
+    }
 
     peer->hasRemoteInfo = true;
 
@@ -3322,6 +3338,8 @@ void SonobusAudioProcessor::sendRemotePeerInfoUpdate(int index, RemotePeer * top
     info->setProperty("inlat", 1e3 * currSamplesPerBlock / getSampleRate());
     info->setProperty("outlat", 1e3 * currSamplesPerBlock / getSampleRate());
     info->setProperty("rec", isRecordingToFile());
+    info->setProperty("sendmute", (bool)mMainSendMute.get());
+    info->setProperty("recvmute", (bool)mMainRecvMute.get());
 
     // nettype TODO
 
@@ -5693,6 +5711,30 @@ bool SonobusAudioProcessor::getRemotePeerBlockedUs(int index) const
     return false;
 }
 
+bool SonobusAudioProcessor::getRemotePeerMainSendMuted(int index, bool *known) const
+{
+    if (known) *known = false;
+    const ScopedReadLock sl (mCoreLock);
+    if (index < mRemotePeers.size()) {
+        RemotePeer * remote = mRemotePeers.getUnchecked(index);
+        if (known) *known = remote->remoteMainSendMutedKnown;
+        return remote->remoteMainSendMuted;
+    }
+    return false;
+}
+
+bool SonobusAudioProcessor::getRemotePeerMainRecvMuted(int index, bool *known) const
+{
+    if (known) *known = false;
+    const ScopedReadLock sl (mCoreLock);
+    if (index < mRemotePeers.size()) {
+        RemotePeer * remote = mRemotePeers.getUnchecked(index);
+        if (known) *known = remote->remoteMainRecvMutedKnown;
+        return remote->remoteMainRecvMuted;
+    }
+    return false;
+}
+
 void  SonobusAudioProcessor::resetRemotePeerPacketStats(int index)
 {
     const ScopedReadLock sl (mCoreLock);        
@@ -6726,6 +6768,8 @@ void SonobusAudioProcessor::parameterChanged (const String &parameterID, float n
                 }
             }
         }
+
+        sendRemotePeerInfoUpdate();
     }
     else if (parameterID == paramMainRecvMute) {
         // allow or disallow sending to all peers
@@ -6761,6 +6805,8 @@ void SonobusAudioProcessor::parameterChanged (const String &parameterID, float n
                 }
             }
         }
+
+        sendRemotePeerInfoUpdate();
     }
     else if (parameterID == paramWet) {
         mWet = newValue;

@@ -3082,7 +3082,7 @@ void ChannelGroupsView::updatePeerModeChannelViews(int specific)
 
     float disalpha = 0.4;
     mMainChannelView->nameLabel->setAlpha(connected ? 1.0 : 0.8);
-    mMainChannelView->levelSlider->setAlpha((recvactive && !safetymuted) ? 1.0 : disalpha);
+    mMainChannelView->levelSlider->setAlpha((!safetymuted) ? 1.0 : disalpha);
 
     // effects aren't used if channel count is above 2, right now
     mMainChannelView->fxButton->setVisible(!expanded && changroups == 1 && chcnt <= 2);
@@ -3249,7 +3249,7 @@ void ChannelGroupsView::updatePeerModeChannelViews(int specific)
 
         const float disalpha = 0.4;
         pvf->nameLabel->setAlpha(connected ? 1.0 : 0.8);
-        pvf->levelSlider->setAlpha((recvactive && !safetymuted) ? 1.0 : disalpha);
+        pvf->levelSlider->setAlpha((!safetymuted) ? 1.0 : disalpha);
 
         // effects aren't used if channel count is above 2, right now
         pvf->fxButton->setVisible(isprimary && chcnt <= 2);

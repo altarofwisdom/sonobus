@@ -1620,6 +1620,10 @@ void PeersContainerView::updatePeerViews(int specific)
         bool recvallow = processor.getRemotePeerRecvAllow(i);
         bool safetymuted = processor.getRemotePeerSafetyMuted(i);
         bool blocked = processor.getRemotePeerBlockedUs(i);
+        bool remoteMainSendMutedKnown = false;
+        bool remoteMainRecvMutedKnown = false;
+        bool remoteMainSendMuted = processor.getRemotePeerMainSendMuted(i, &remoteMainSendMutedKnown);
+        bool remoteMainRecvMuted = processor.getRemotePeerMainRecvMuted(i, &remoteMainRecvMutedKnown);
 
         const int chcnt = processor.getRemotePeerRecvChannelCount(i);
 
@@ -1649,7 +1653,11 @@ void PeersContainerView::updatePeerViews(int specific)
             pvf->sendActualBitrateLabel->setColour(Label::textColourId, regularTextColor);
         }
         else if (sendallow) {
-            sendtext += TRANS("Other end muted us");
+            if (remoteMainRecvMutedKnown && remoteMainRecvMuted) {
+                sendtext += TRANS("Other end muted us");
+            } else {
+                sendtext += TRANS("Remote receive inactive");
+            }
             pvf->sendActualBitrateLabel->setColour(Label::textColourId, mutedTextColor);
         }
         else {
@@ -1692,7 +1700,12 @@ void PeersContainerView::updatePeerViews(int specific)
             pvf->lastDropped = dropped;
         }
         else if (recvallow) {
-            recvtext += TRANS("Other side is muted");    
+            if (remoteMainSendMutedKnown && remoteMainSendMuted) {
+                recvtext += TRANS("Other side is muted");
+            } else {
+                recvtext += (chcnt > 0 ? TRANS("Incoming stream inactive")
+                                       : TRANS("Waiting for incoming stream"));
+            }
             pvf->recvActualBitrateLabel->setColour(Label::textColourId, mutedTextColor);
         }
         else {

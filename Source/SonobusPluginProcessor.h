@@ -500,6 +500,8 @@ public:
 
     bool getRemotePeerSafetyMuted(int index) const;
     bool getRemotePeerBlockedUs(int index) const;
+    bool getRemotePeerMainSendMuted(int index, bool *known = nullptr) const;
+    bool getRemotePeerMainRecvMuted(int index, bool *known = nullptr) const;
     
     struct LatencyInfo
     {
