@@ -29,6 +29,7 @@
 static SonobusAudioProcessor* g_activeProcessor = nullptr;
 
 void remote_log_helper(const String& msg);
+static void AOO_CALL sono_aoo_log_callback(AooLogLevel level, const AooChar *message);
 
 #define SONO_LOG(x) do { \
     std::stringstream ss; \
@@ -922,7 +923,10 @@ void SonobusAudioProcessor::initializeAoo(int udpPort)
     
     // we have both an AOO source and sink
         
-    aoo_initialize(nullptr);
+    AooSettings aooSettings;
+    AooSettings_init(&aooSettings);
+    aooSettings.logFunc = sono_aoo_log_callback;
+    aoo_initialize(&aooSettings);
     
 
     const ScopedWriteLock sl (mCoreLock);        
@@ -2498,6 +2502,7 @@ SonobusAudioProcessor::EndpointState * SonobusAudioProcessor::findOrAddEndpoint(
         endpoint = mEndpoints.add(new EndpointState(ipaddr));
         endpoint->ownerSocket = mUdpSocketHandle;
         DBG("Added new endpoint for " << ipaddr.name_unmapped() << ":" << ipaddr.port());
+        SONO_LOG("New endpoint added: " << ipaddr.name_unmapped() << " port " << ipaddr.port() << " type: " << (ipaddr.type() == aoo::ip_address::IPv6 ? "IPv6" : "IPv4"));
     }
     return endpoint;
 }
@@ -3892,6 +3897,9 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                         //peer->recvFormatIndex = findFormatIndex(codec, 0, fmt->bitdepth);
                     }
                     
+                    SONO_LOG("Peer format event: endpointId=" << e->endpoint.id
+                             << " addr=" << es->ipaddr << ":" << es->port
+                             << " recvChannels=" << peer->recvChannels);
                     clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientPeerChangedState, this, "format");
                 }
             }
@@ -3921,7 +3929,9 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                     if (gserr == kAooOk) {
                         const ScopedWriteLock slw (peer->sinkLock);
                         peer->recvChannels = std::min(MAX_PANNERS, f.header.numChannels);
-                        DBG("Stream active, initialized channels from getSourceFormat: " << peer->recvChannels);
+                        SONO_LOG("Peer stream active format recovery: endpointId=" << e->endpoint.id
+                                 << " addr=" << es->ipaddr << ":" << es->port
+                                 << " recvChannels=" << peer->recvChannels);
                         int sinkchan = std::max(getMainBusNumOutputChannels(), peer->recvChannels);
                         peer->oursink->setup(sinkchan, getSampleRate(), currSamplesPerBlock, 0);
                         peer->recvMeterSource.resize (peer->recvChannels, meterRmsWindow);
@@ -3931,6 +3941,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                         if (peer->recvChannels == 1) {
                             peer->viewExpanded = false;
                         }
+                        clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientPeerChangedState, this, "format");
                     } else {
                         DBG("Stream active but getSourceFormat failed with error: " << gserr);
                     }
@@ -9766,6 +9777,27 @@ void AooServerWrapper::handleUdpReceive(int e, const aoo::ip_address& addr,
 
 void remote_log_helper(const String& msg) {
     if (g_activeProcessor) g_activeProcessor->logToRemote(msg);
+}
+
+static void AOO_CALL sono_aoo_log_callback(AooLogLevel level, const AooChar *message)
+{
+    if (!message) return;
+
+    const char* levelTag = "";
+    switch (level) {
+        case kAooLogLevelDebug: levelTag = "[AOO:debug] "; break;
+        case kAooLogLevelVerbose: levelTag = "[AOO:verbose] "; break;
+        case kAooLogLevelWarning: levelTag = "[AOO:warning] "; break;
+        case kAooLogLevelError: levelTag = "[AOO:error] "; break;
+        default: break;
+    }
+
+    std::cout << levelTag << message << std::endl;
+
+    String msg(message);
+    if (msg.startsWith("[SONOLOG]")) {
+        remote_log_helper(msg.substring(9).trimStart());
+    }
 }
 
 void SonobusAudioProcessor::logToRemote(const String& msg)

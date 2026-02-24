@@ -74,9 +74,14 @@ void handle_udp_receive(aoo::udp_server* server, int e, const aoo::ip_address& a
          // std::cout << "UDP received " << size << " bytes from " << addr << std::endl;
     }
     if (e == 0) {
-        if (size > 9 && !memcmp(data, "[SONOLOG]", 9)) {
-             std::cout << std::string((const char *)data + 9, size - 9) << std::endl;
-             return;
+        if (size >= 9 && !memcmp(data, "[SONOLOG]", 9)) {
+            auto unmapped = addr.unmapped();
+            std::cout << "[remote-log " << addr;
+            if (unmapped != addr) {
+                std::cout << " -> " << unmapped;
+            }
+            std::cout << "] " << std::string((const char *)data + 9, size - 9) << std::endl;
+            return;
         }
         // Use the specific server instance to reply, ensuring correct Source IP
         g_aoo_server->handleUdpMessage(data, size, addr.address(), addr.length(),

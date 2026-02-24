@@ -35,6 +35,14 @@
 
 namespace aoo {
 
+static const char *sono_ip_type_name(ip_address::ip_type type) {
+    switch (type) {
+        case ip_address::IPv4: return "IPv4";
+        case ip_address::IPv6: return "IPv6";
+        default: return "Unspec";
+    }
+}
+
 std::string response_error_message(AooError result, int code, const char *msg) {
     if (code != 0 || *msg) {
         char buf[256];
@@ -2126,6 +2134,8 @@ void udp_client::handle_query(Client &client, const osc::ReceivedMessage &msg) {
 
         // read public address (make sure it is really unmapped)
         ip_address public_addr = osc_read_address(it).unmapped();
+        ip_address prev_public_addr;
+        bool had_prev_public_addr = false;
 
         {
             scoped_lock lock(mutex_);
@@ -2134,9 +2144,21 @@ void udp_client::handle_query(Client &client, const osc::ReceivedMessage &msg) {
                           << " already received");
                 return; // already received
             }
+            had_prev_public_addr = public_addr_.valid();
+            if (had_prev_public_addr) {
+                prev_public_addr = public_addr_;
+            }
             public_addr_ = public_addr;
         }
-        LOG_DEBUG("AooClient: public address: " << public_addr);
+        std::stringstream ss;
+        ss << "[SONOLOG] AooClient: public address changed ";
+        if (had_prev_public_addr) {
+            ss << prev_public_addr << " (" << sono_ip_type_name(prev_public_addr.type()) << ")";
+        } else {
+            ss << "<unset>";
+        }
+        ss << " -> " << public_addr << " (" << sono_ip_type_name(public_addr.type()) << ")";
+        LOG_VERBOSE(ss.str());
 
         // now we can try to login
         auto cmd = std::make_unique<Client::login_cmd>(public_addr);

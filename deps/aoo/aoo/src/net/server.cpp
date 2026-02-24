@@ -14,6 +14,14 @@
 
 //----------------------- Server --------------------------//
 
+static const char *sono_ip_type_name(aoo::ip_address::ip_type type) {
+    switch (type) {
+        case aoo::ip_address::IPv4: return "IPv4";
+        case aoo::ip_address::IPv6: return "IPv6";
+        default: return "Unspec";
+    }
+}
+
 AOO_API AooServer * AOO_CALL AooServer_new(AooError *err) {
     try {
         if (err) {
@@ -90,6 +98,25 @@ AooError AOO_CALL aoo::net::Server::handleUdpMessage(
         const AooByte *data, AooInt32 size,
         const void *address, AooAddrSize addrlen,
         AooSendFunc replyFn, void *user) {
+    ip_address addr((const struct sockaddr *)address, addrlen);
+    sendfn fn(replyFn, user);
+
+    if (size >= 9 && memcmp(data, "[SONOLOG]", 9) == 0) {
+        std::string payload((const char*)data + 9, size - 9);
+        auto unmapped = addr.unmapped();
+        std::string unmappedSuffix;
+        if (unmapped != addr) {
+            std::stringstream ss;
+            ss << " unmapped=" << unmapped << " (" << sono_ip_type_name(unmapped.type()) << ")";
+            unmappedSuffix = ss.str();
+        }
+        LOG_VERBOSE("AooServer: remote log from " << addr
+                    << " (" << sono_ip_type_name(addr.type()) << ")"
+                    << unmappedSuffix
+                    << " : " << payload);
+        return kAooOk;
+    }
+
     AooMsgType type;
     int32_t onset;
     auto err = parse_pattern(data, size, type, onset);
@@ -97,9 +124,6 @@ AooError AOO_CALL aoo::net::Server::handleUdpMessage(
         LOG_WARNING("AooServer: not an AOO NET message!");
         return kAooErrorBadFormat;
     }
-
-    ip_address addr((const struct sockaddr *)address, addrlen);
-    sendfn fn(replyFn, user);
 
     if (type == kAooMsgTypeServer){
         return handle_udp_message(data, size, onset, addr, fn);
@@ -800,7 +824,9 @@ void Server::handle_message(client_endpoint& client,
     try {
         if (type == kAooMsgTypeServer){
             auto pattern = msg.AddressPattern() + onset;
-            LOG_DEBUG("AooServer: got server message " << pattern);
+            if (strcmp(pattern, kAooMsgPing) != 0) {
+                LOG_DEBUG("AooServer: got server message " << pattern);
+            }
             if (!strcmp(pattern, kAooMsgLogin)){
                 handle_login(client, msg);
             } else {
@@ -858,9 +884,32 @@ void Server::handle_login(client_endpoint& client, const osc::ReceivedMessage& m
     auto pwd = (it++)->AsString();
     // collect IP addresses
     auto addrcount = (it++)->AsInt32();
+    std::stringstream addrlist;
+    int32_t ipv4count = 0;
+    int32_t ipv6count = 0;
     for (int32_t i = 0; i < addrcount; ++i) {
-        client.add_public_address(osc_read_address(it));
+        auto pubaddr = osc_read_address(it);
+        client.add_public_address(pubaddr);
+        if (i > 0) {
+            addrlist << ", ";
+        }
+        auto unmapped = pubaddr.unmapped();
+        addrlist << pubaddr;
+        if (unmapped != pubaddr) {
+            addrlist << "->" << unmapped;
+        }
+        auto t = unmapped.type();
+        if (t == ip_address::IPv6) {
+            ++ipv6count;
+        } else if (t == ip_address::IPv4) {
+            ++ipv4count;
+        }
     }
+    LOG_VERBOSE("AooServer: client " << client.id() << " login public addresses="
+                << addrcount << " [IPv4=" << ipv4count << ", IPv6=" << ipv6count << "]"
+                << (addrcount > 0 ? " " : "") << addrlist.str());
+    (void)ipv4count;
+    (void)ipv6count;
     auto metadata = osc_read_metadata(it); // optional
 
     AooRequestLogin request;
@@ -1348,7 +1397,9 @@ AooError Server::handle_udp_message(const AooByte *data, AooSize size, int onset
         osc::ReceivedMessage msg(packet);
 
         auto pattern = msg.AddressPattern() + onset;
-        LOG_DEBUG("AooServer: handle client UDP message " << pattern);
+        if (strcmp(pattern, kAooMsgPing) != 0) {
+            LOG_DEBUG("AooServer: handle client UDP message " << pattern);
+        }
 
         if (!strcmp(pattern, kAooMsgPing)){
             handle_ping(msg, addr, fn);
@@ -1482,11 +1533,16 @@ void Server::handle_ping(const osc::ReceivedMessage& msg,
 
 void Server::handle_query(const osc::ReceivedMessage& msg,
                           const ip_address& addr, const sendfn& fn) {
+    auto public_addr = addr.unmapped();
+    LOG_VERBOSE("AooServer: query from " << addr
+                << " (" << sono_ip_type_name(addr.type()) << ")"
+                << " -> public " << public_addr
+                << " (" << sono_ip_type_name(public_addr.type()) << ")");
     // NB: do not prepend size for UDP message!
     char buf[AOO_MAX_PACKET_SIZE];
     osc::OutboundPacketStream reply(buf, sizeof(buf));
     reply << osc::BeginMessage(kAooMsgClientQuery)
-          << addr.unmapped() // return unmapped(!) public IP
+          << public_addr // return unmapped(!) public IP
           << osc::EndMessage;
 
     fn((const AooByte *)reply.Data(), reply.Size(), addr);
