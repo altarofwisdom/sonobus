@@ -3928,6 +3928,28 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             
             break;
         }
+        case kAooEventStreamStart:
+        {
+            auto e = (AooEventStreamStart *)event;
+            EndpointState * es = (EndpointState *) findOrAddRawEndpoint(e->endpoint.address, e->endpoint.addrlen);
+            const ScopedReadLock sl (mCoreLock);
+            RemotePeer * peer = findRemotePeer(es, sinkId);
+            if (peer) {
+                peer->recvActive = peer->recvAllow;
+            }
+            break;
+        }
+        case kAooEventStreamStop:
+        {
+            auto e = (AooEventStreamStop *)event;
+            EndpointState * es = (EndpointState *) findOrAddRawEndpoint(e->endpoint.address, e->endpoint.addrlen);
+            const ScopedReadLock sl (mCoreLock);
+            RemotePeer * peer = findRemotePeer(es, sinkId);
+            if (peer) {
+                peer->recvActive = false;
+            }
+            break;
+        }
         case kAooEventStreamState:
         {
             auto e = (AooEventStreamState *)event;
@@ -3939,7 +3961,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             
             RemotePeer * peer = findRemotePeer(es, sinkId);
             if (peer) {
-                peer->recvActive = peer->recvAllow && e->state == kAooStreamStateActive;
+                peer->recvActive = peer->recvAllow && (e->state == kAooStreamStateActive || e->state == kAooStreamStateBuffering);
                 
                 if (peer->recvActive && peer->recvChannels == 0) {
                     AooFormatStorage f;
