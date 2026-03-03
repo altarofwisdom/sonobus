@@ -5,6 +5,12 @@
 
 #include <exception>
 
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
+#include <netinet/in.h>
+#endif
+
 // OSC address patterns
 
 #define kAooMsgGroupJoin \
@@ -159,7 +165,16 @@ using ip_address_list = std::vector<ip_address>;
 #endif
 
 inline osc::OutboundPacketStream& operator<<(osc::OutboundPacketStream& msg, const ip_address& addr) {
-    msg << addr.name() << (int32_t)addr.port();
+    std::string name = addr.name();
+#if AOO_USE_IPv6
+    if (addr.type() == ip_address::IPv6) {
+        auto sa = (const sockaddr_in6*)addr.address();
+        if (sa->sin6_scope_id != 0) {
+            name += "%" + std::to_string(sa->sin6_scope_id);
+        }
+    }
+#endif
+    msg << name.c_str() << (int32_t)addr.port();
     return msg;
 }
 

@@ -72,6 +72,8 @@ public:
 
     bool is_ipv4_mapped() const;
 
+    bool is_link_local() const;
+
     ip_address ipv4_mapped() const;
 
     ip_address unmapped() const;

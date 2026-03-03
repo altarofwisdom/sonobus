@@ -147,13 +147,36 @@ void client_endpoint::send_peer_add(Server& server, const group& grp, const user
         flags |= kAooPeerPersistent;
     }
 
+    bool same_lan = false;
+    for (auto& a1 : public_addresses_) {
+        // skip link-local addresses for same_lan detection:
+        // scope_id is host-local, so link-local addresses from
+        // different hosts will never match meaningfully.
+        if (a1.is_link_local()) continue;
+        for (auto& a2 : client.public_addresses_) {
+            if (a2.is_link_local()) continue;
+            if (a1 == a2) {
+                same_lan = true;
+                break;
+            }
+        }
+        if (same_lan) break;
+    }
+
+    std::vector<ip_address> filtered_addrs;
+    for (auto& addr : client.public_addresses()){
+        if (!addr.is_link_local() || same_lan) {
+            filtered_addrs.push_back(addr);
+        }
+    }
+
     msg << osc::BeginMessage(kAooMsgClientPeerJoin)
         << grp.name().c_str() << grp.id()
         << usr.name().c_str() << usr.id()
         << client.version().c_str() << (int32_t)flags
     // IP addresses
-        << (int32_t)client.public_addresses().size();
-    for (auto& addr : client.public_addresses()){
+        << (int32_t)filtered_addrs.size();
+    for (auto& addr : filtered_addrs){
         msg << addr;
     }
     msg << usr.metadata() << usr.relay_addr()

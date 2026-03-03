@@ -992,23 +992,18 @@ int Client::try_connect(const ip_host& server){
         LOG_ERROR("AooClient: couldn't resolve host name: " << socket_strerror(err));
         return err;
     }
-    // sort IPv4(-mapped) first because it is more likely for an AOO server to be IP4-only than
-    // to be IPv6-only
-    std::sort(addrlist.begin(), addrlist.end(), [](auto& a, auto& b) {
-        return ((a.type() == ip_address::IPv4) || (a.is_ipv4_mapped()))
-               && b.type() == ip_address::IPv6;
-    });
 
-    LOG_VERBOSE("AooClient: try to connect to " << server.name << " on port " << server.port);
-    // try to connect to both addresses (just because the hostname resolves to IPv4
+    LOG_WARNING("AooClient: try to connect to " << server.name << " on port " << server.port
+                << " (" << addrlist.size() << " addresses resolved)");
+    // try to connect to each resolved address (just because the hostname resolves to IPv4
     // and IPv6 addresses does not mean that the AOO server actually supports both).
     for (auto& addr : addrlist) {
-        LOG_DEBUG("AooClient: try to connect to " << addr);
-        // try to connect (LATER make timeout configurable)
+        LOG_WARNING("AooClient: trying address " << addr);
         if (socket_connect(socket_, addr, 5.0) == 0) {
-            LOG_VERBOSE("AooClient: successfully connected to " << addr);
+            LOG_WARNING("AooClient: successfully connected to " << addr);
             return 0;
         }
+        LOG_WARNING("AooClient: connect to " << addr << " failed (" << socket_strerror(socket_errno()) << ")");
     }
     int err = socket_errno();
     LOG_ERROR("AooClient: couldn't connect to " << server.name << " on port "
@@ -1073,8 +1068,12 @@ void Client::perform(const login_cmd& cmd) {
 
 void Client::perform(const timeout_cmd& cmd) {
     if (connection_ && state_.load() == client_state::handshake) {
-        connection_->reply_error(kAooErrorUDPHandshakeTimeOut);
-        close();
+        LOG_WARNING("AooClient: UDP handshake timed out, falling back to TCP-only connect");
+        // Instead of giving up, try to connect via TCP without a public address.
+        // This allows connections to work even when the UDP path is broken
+        // (e.g., EPIPE on macOS when server is bound to a specific IPv6 address).
+        auto login = std::make_unique<login_cmd>(ip_address{}); // empty public address
+        push_command(std::move(login));
     }
 }
 
@@ -1467,6 +1466,7 @@ void Client::receive_data(){
         }
     } else if (result == 0) {
         // connection closed by the remote server
+        LOG_ERROR("AooClient: TCP connection closed by server");
         on_socket_error(0);
     } else {
         int err = socket_errno();
@@ -1594,7 +1594,7 @@ void Client::handle_login(const osc::ReceivedMessage& msg){
 
             // connected!
             state_.store(client_state::connected);
-            LOG_VERBOSE("AooClient: successfully logged in (client ID: "
+            LOG_WARNING("AooClient: successfully logged in (client ID: "
                         << id << ")");
             // notify
             AooResponseConnect response;
@@ -1709,9 +1709,10 @@ void Client::handle_peer_add(const osc::ReceivedMessage& msg){
         // read as is! They might be used as identifiers in relay message.
         auto addr = osc_read_address(it);
         if (addr.is_ipv4_mapped()) {
-            // peer addresses must be unmapped!
-            LOG_WARNING("AooClient: ignore IPv4-mapped peer address " << addr);
-            continue;
+            // unmap IPv4-mapped addresses so they can be used with
+            // both IPv4-only and dual-stack sockets
+            LOG_DEBUG("AooClient: unmapping IPv4-mapped peer address " << addr);
+            addr = addr.unmapped();
         }
         // filter local addresses so that we don't accidentally ping ourselves!
         if (addr.valid() && std::find(local_addr_.begin(), local_addr_.end(), addr)
@@ -1847,10 +1848,15 @@ bool Client::signal() {
 }
 
 void Client::close(bool silent){
+    auto prev_state = state_.load();
     if (socket_ >= 0){
         socket_close(socket_);
         socket_ = -1;
-        LOG_VERBOSE("AooClient: closed connection");
+        if (!silent && prev_state == client_state::connected) {
+            LOG_ERROR("AooClient: connection closed (was connected)");
+        } else {
+            LOG_WARNING("AooClient: connection closed (state=" << (int)prev_state << " silent=" << silent << ")");
+        }
     }
 
     connection_ = nullptr;
@@ -1863,8 +1869,8 @@ void Client::close(bool silent){
     // clear pending request
     pending_requests_.clear();
 
-    if (!silent && state_.load() == client_state::connected){
-        auto e = std::make_unique<disconnect_event>(0, "no error");
+    if (!silent && prev_state == client_state::connected){
+        auto e = std::make_unique<disconnect_event>(0, "connection lost");
         send_event(std::move(e));
     }
     state_.store(client_state::disconnected);
@@ -2103,6 +2109,12 @@ void udp_client::send_server_message(const osc::OutboundPacketStream& msg, const
     auto addr = remote_addr_;
     lock.unlock();
     // send unlocked
+    static int udp_send_count = 0;
+    if (udp_send_count < 5) {
+        fprintf(stderr, "[SONO] udp_client::send_server_message to %s (family=%d, port=%d)\n",
+                addr.name(), addr.type(), addr.port());
+        udp_send_count++;
+    }
     fn((const AooByte *)msg.Data(), msg.Size(), addr);
 }
 

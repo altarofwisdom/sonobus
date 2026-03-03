@@ -35,7 +35,7 @@ static void AOO_CALL sono_aoo_log_callback(AooLogLevel level, const AooChar *mes
     std::stringstream ss; \
     ss << x; \
     String __s(ss.str()); \
-    std::cout << "[SONO] " << __s << std::endl; \
+    fprintf(stderr, "[SONO] %s\n", __s.toRawUTF8()); \
     remote_log_helper(__s); \
 } while(0)
 
@@ -463,7 +463,15 @@ int32_t SonobusAudioProcessor::udpsend(void *user, const AooByte *msg, AooInt32 
         return endpoint_send(es, msg, size);
     }
     else {
-        return aoo::socket_sendto(x->mUdpSocketHandle, msg, size, address);
+        auto ret = aoo::socket_sendto(x->mUdpSocketHandle, msg, size, address);
+        int saved_errno = (ret < 0) ? errno : 0;
+        static int sendto_log_count = 0;
+        if (sendto_log_count < 10) {
+            fprintf(stderr, "[SONO] udpsend: fd=%d sendto %s:%d size=%d ret=%d errno=%d\n",
+                    x->mUdpSocketHandle, address.name(), address.port(), size, ret, saved_errno);
+            sendto_log_count++;
+        }
+        return ret;
     }
 }
 
@@ -572,12 +580,12 @@ public:
     {}
     
     void run() override {
-
+        fprintf(stderr, "[SONO] ClientThread: entering run()\n");
         if (_processor.mAooClient) {
+            fprintf(stderr, "[SONO] ClientThread: calling mAooClient->run(false)\n");
             _processor.mAooClient->run(false);
         }
-        
-        DBG("Client thread finishing");        
+        fprintf(stderr, "[SONO] ClientThread: run() returned - thread finishing\n");
     }
     
     SonobusAudioProcessor & _processor;
@@ -901,6 +909,7 @@ mState (*this, &mUndoManager, "SonoBusAoO",
 
 SonobusAudioProcessor::~SonobusAudioProcessor()
 {
+    fprintf(stderr, "[SONO] === ~SonobusAudioProcessor DESTRUCTOR ===\n");
     if (g_activeProcessor == this) g_activeProcessor = nullptr;
 
     mTransportSource.setSource(nullptr);
@@ -1124,7 +1133,9 @@ void SonobusAudioProcessor::initializeAoo(int udpPort)
 
 void SonobusAudioProcessor::cleanupAoo()
 {
-    disconnectFromServer();
+    if (mIsConnectedToServer) {
+        disconnectFromServer();
+    }
     
     DBG("waiting on recv thread to die");
     mRecvThread->stopThread(400);
@@ -1256,12 +1267,15 @@ bool SonobusAudioProcessor::connectToServer(const String & host, int port, const
                  const AooResponse *response) {
         auto obj = (SonobusAudioProcessor *)x;
 
+        fprintf(stderr, "[SONO] connectToServer callback: result=%d\n", (int)result);
+
         if (result == kAooOk)
         {
             auto resp = reinterpret_cast<const AooResponseConnect *>(response);
-            
+
             auto client_id = resp->clientId;
 
+            fprintf(stderr, "[SONO] connectToServer: SUCCESS, clientId=%d\n", (int)client_id);
             obj->mIsConnectedToServer = true;
             obj->mSessionConnectionStamp = Time::getMillisecondCounterHiRes();
             obj->mCurrentClientId = client_id;
@@ -1275,13 +1289,15 @@ bool SonobusAudioProcessor::connectToServer(const String & host, int port, const
             obj->mSessionConnectionStamp = 0.0;
             obj->mCurrentClientId = kAooIdInvalid;
 
-            DBG("Error connecting to server (Result: " << result << "): " << (reply ? reply->errorCode : -1) << " msg: " << (reply ? reply->errorMessage : "null"));
+            fprintf(stderr, "[SONO] Error connecting to server (Result: %d): %d msg: %s\n", (int)result, reply ? reply->errorCode : -1, reply ? reply->errorMessage : "null");
 
             obj->clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientConnected, obj, response->type != kAooRequestError, reply ? reply->errorMessage : "");
         }
     };
 
+    fprintf(stderr, "[SONO] connectToServer: attempting %s:%d user=%s\n", host.toRawUTF8(), port, username.toRawUTF8());
     auto retval = mAooClient->connect(host.toRawUTF8(), port, passwd.toRawUTF8(), nullptr, cb, this);
+    fprintf(stderr, "[SONO] connectToServer: mAooClient->connect returned %d\n", (int)retval);
 
 #if 0
     auto cb = [](void *x, AooError result, const void *data){
@@ -1338,15 +1354,21 @@ bool SonobusAudioProcessor::disconnectFromServer()
 {
     if (!mAooClient) return false;
 
+    fprintf(stderr, "[SONO] disconnectFromServer called, mIsConnectedToServer=%d\n", (int)mIsConnectedToServer);
+
     auto cb = [](void* x, const AooRequest *request, AooError result,
                  const AooResponse *response) {
         auto obj = (SonobusAudioProcessor *)x;
         if (result == kAooOk)
         {
-
+            DBG("Disconnected from server successfully");
+        } else if (result == kAooErrorNotConnected) {
+            DBG("disconnectFromServer: was not connected (harmless)");
         } else {
             auto reply = reinterpret_cast<const AooResponseError *>(response);
-            DBG("Error disconnecting to server: " << reply->errorCode << " msg: " << reply->errorMessage);
+            DBG("Error disconnecting from server: result=" << result
+                << " errorCode=" << (reply ? reply->errorCode : -1)
+                << " msg: " << (reply ? reply->errorMessage : "null"));
         }
 
         // disconnect from everything else!
@@ -3589,16 +3611,24 @@ int32_t SonobusAudioProcessor::handleAooClientEvent(const AooEvent *event, int32
         }
             
             
-        case kAooRequestDisconnect:
+        case kAooEventDisconnect:
         {
-            // don't remove all peers?
-            //removeAllRemotePeers();
-            
+            auto e = (const AooEventDisconnect *)event;
+            DBG("Server disconnect event: code=" << e->errorCode << " msg: " << e->errorMessage);
+
+            removeAllRemotePeers();
+
             mIsConnectedToServer = false;
             mSessionConnectionStamp = 0.0;
-            
-            clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientDisconnected, this, true, "");
-            
+
+            {
+                const ScopedLock sl (mClientLock);
+                mCurrentJoinedGroup.clear();
+            }
+
+            clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientDisconnected, this, true,
+                                 e->errorMessage ? e->errorMessage : "");
+
             break;
         }
 #if 0
@@ -3733,8 +3763,27 @@ int32_t SonobusAudioProcessor::handleAooClientEvent(const AooEvent *event, int32
         case kAooEventError:
         {
             auto e = (const AooEventError *)event;
-            DBG("client error: " << e->errorMessage);
-            clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientError, this, e->errorMessage);
+            DBG("AooClient error: code=" << e->errorCode << " msg: " << e->errorMessage);
+
+            // socket errors cause the AOO client to close the connection internally,
+            // so we need to update our state to match
+            if (mIsConnectedToServer) {
+                removeAllRemotePeers();
+
+                mIsConnectedToServer = false;
+                mSessionConnectionStamp = 0.0;
+
+                {
+                    const ScopedLock sl (mClientLock);
+                    mCurrentJoinedGroup.clear();
+                }
+
+                clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientDisconnected, this, false,
+                                     e->errorMessage ? e->errorMessage : "");
+            }
+
+            clientListeners.call(&SonobusAudioProcessor::ClientListener::aooClientError, this,
+                                 e->errorMessage ? e->errorMessage : "");
             break;
         }
         case kAooEventPeerPing:
@@ -9860,7 +9909,7 @@ static void AOO_CALL sono_aoo_log_callback(AooLogLevel level, const AooChar *mes
         default: break;
     }
 
-    std::cout << levelTag << message << std::endl;
+    fprintf(stderr, "%s%s\n", levelTag, message);
 
     String msg(message);
     if (msg.startsWith("[SONOLOG]")) {

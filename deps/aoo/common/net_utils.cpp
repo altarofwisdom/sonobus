@@ -10,6 +10,7 @@
 
 #ifdef _WIN32
 #include <ws2tcpip.h>
+#include <mstcpip.h>
 #else
 #include <sys/select.h>
 #include <sys/poll.h>
@@ -334,15 +335,37 @@ bool ip_address::operator==(const ip_address& other) const {
         {
             auto a = (const struct sockaddr_in6 *)&address_;
             auto b = (const struct sockaddr_in6 *)&other.address_;
-            return !memcmp(a->sin6_addr.s6_addr, b->sin6_addr.s6_addr,
-                           sizeof(struct in6_addr))
-                    && (a->sin6_port == b->sin6_port);
+            if (memcmp(a->sin6_addr.s6_addr, b->sin6_addr.s6_addr,
+                           sizeof(struct in6_addr)) != 0
+                    || (a->sin6_port != b->sin6_port)) {
+                return false;
+            }
+            // check scope ID for link-local addresses
+            bool is_link_local = ((a->sin6_addr.s6_addr[0] == 0xfe && (a->sin6_addr.s6_addr[1] & 0xc0) == 0x80) ||
+                                  (a->sin6_addr.s6_addr[0] == 0xff && (a->sin6_addr.s6_addr[1] & 0x0f) == 0x02));
+            if (is_link_local) {
+                // If both scope IDs are non-zero, they must match
+                if (a->sin6_scope_id != 0 && b->sin6_scope_id != 0) {
+                    return a->sin6_scope_id == b->sin6_scope_id;
+                }
+            }
+            return true;
         }
     #endif
         default:
             break;
         }
     }
+#if AOO_USE_IPv6
+    else {
+        // handle mapped vs unmapped
+        if (is_ipv4_mapped() && other.type() == IPv4) {
+            return unmapped() == other;
+        } else if (type() == IPv4 && other.is_ipv4_mapped()) {
+            return *this == other.unmapped();
+        }
+    }
+#endif
     return false;
 }
 
@@ -473,6 +496,19 @@ bool ip_address::is_ipv4_mapped() const {
         auto w = (uint16_t *)addr->sin6_addr.s6_addr;
         return (w[0] == 0) && (w[1] == 0) && (w[2] == 0) && (w[3] == 0) &&
                (w[4] == 0) && (w[5] == 0xffff);
+    }
+#endif
+    return false;
+}
+
+bool ip_address::is_link_local() const {
+#if AOO_USE_IPv6
+    if (address()->sa_family == AF_INET6){
+        auto addr = reinterpret_cast<const sockaddr_in6 *>(&address_);
+        // fe80::/10 (fe80 to febf) -> 1111 1110 10xx xxxx
+        // ff02::/16 (link-local multicast)
+        return ((addr->sin6_addr.s6_addr[0] == 0xfe && (addr->sin6_addr.s6_addr[1] & 0xc0) == 0x80) ||
+                (addr->sin6_addr.s6_addr[0] == 0xff && (addr->sin6_addr.s6_addr[1] & 0x0f) == 0x02));
     }
 #endif
     return false;
@@ -620,9 +656,14 @@ int socket_udp(const ip_address& bindaddr)
             // make dual stack socket by listening to both IPv4 and IPv6 packets
             // only if it's a wildcard address
             if (socket_set_int_option(sock, IPPROTO_IPV6, IPV6_V6ONLY, false) != 0) {
-                // ignore error
+                fprintf(stderr, "aoo: failed to disable IPV6_V6ONLY (dual-stack might not work)\n");
+                fflush(stderr);
             }
         }
+#ifdef __APPLE__
+        // Prevent EPIPE/SIGPIPE on send errors
+        socket_set_int_option(sock, SOL_SOCKET, SO_NOSIGPIPE, true);
+#endif
     } else {
 #if AOO_USE_IPv6
         if (family == AF_INET6) {
@@ -662,7 +703,8 @@ int socket_tcp(const ip_address& bindaddr)
         if (family == AF_INET6) {
             // make dual stack socket by listening to both IPv4 and IPv6 packets
             if (socket_set_int_option(sock, IPPROTO_IPV6, IPV6_V6ONLY, false) != 0) {
-                // ignore error
+                fprintf(stderr, "aoo: failed to disable IPV6_V6ONLY (dual-stack might not work)\n");
+                fflush(stderr);
             }
         }
     } else {
@@ -676,6 +718,10 @@ int socket_tcp(const ip_address& bindaddr)
         return -1;
     }
 
+#ifdef __APPLE__
+    // Prevent EPIPE/SIGPIPE on send errors
+    socket_set_int_option(sock, SOL_SOCKET, SO_NOSIGPIPE, true);
+#endif
     // set SO_REUSEADDR
     if (socket_set_int_option(sock, SOL_SOCKET, SO_REUSEADDR, true) != 0) {
         fprintf(stderr, "aoo_client: couldn't set SO_REUSEADDR");
@@ -685,6 +731,32 @@ int socket_tcp(const ip_address& bindaddr)
     if (socket_set_int_option(sock, IPPROTO_TCP, TCP_NODELAY, true)) {
         fprintf(stderr, "aoo_client: couldn't set TCP_NODELAY");
         fflush(stderr);
+    }
+    // enable TCP keepalive to detect dead connections
+    if (socket_set_int_option(sock, SOL_SOCKET, SO_KEEPALIVE, true) != 0) {
+        fprintf(stderr, "aoo_client: couldn't set SO_KEEPALIVE\n");
+        fflush(stderr);
+    } else {
+        // set keepalive timing: start probing after 10s idle,
+        // probe every 5s, give up after 3 failed probes (~25s total)
+#if defined(__APPLE__)
+        // macOS uses TCP_KEEPALIVE instead of TCP_KEEPIDLE
+        socket_set_int_option(sock, IPPROTO_TCP, TCP_KEEPALIVE, 10);
+#elif defined(_WIN32)
+        // Windows: use SIO_KEEPALIVE_VALS via WSAIoctl
+        struct tcp_keepalive ka;
+        ka.onoff = 1;
+        ka.keepalivetime = 10000;    // 10s in ms
+        ka.keepaliveinterval = 5000; // 5s in ms
+        DWORD bytesReturned = 0;
+        WSAIoctl(sock, SIO_KEEPALIVE_VALS, &ka, sizeof(ka),
+                 NULL, 0, &bytesReturned, NULL, NULL);
+#else
+        // Linux and other POSIX
+        socket_set_int_option(sock, IPPROTO_TCP, TCP_KEEPIDLE, 10);
+        socket_set_int_option(sock, IPPROTO_TCP, TCP_KEEPINTVL, 5);
+        socket_set_int_option(sock, IPPROTO_TCP, TCP_KEEPCNT, 3);
+#endif
     }
     // finally bind the socket
     if (bind(sock, bindaddr.address(), bindaddr.length()) != 0) {

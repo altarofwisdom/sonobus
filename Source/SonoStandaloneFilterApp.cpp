@@ -1,6 +1,53 @@
 // SPDX-License-Identifier: GPLv3-or-later WITH Appstore-exception
 // Copyright (C) 2020 Jesse Chappell
 
+#include <signal.h>
+#include <cstdio>
+#include <cstdlib>
+#include <exception>
+#ifndef _WIN32
+#include <execinfo.h>
+#include <unistd.h>
+#include <cstring>
+#endif
+
+static void sono_print_backtrace() {
+#ifndef _WIN32
+    void* frames[64];
+    int count = backtrace(frames, 64);
+    backtrace_symbols_fd(frames, count, STDERR_FILENO);
+#endif
+}
+
+static void sono_crash_handler(int sig) {
+    fprintf(stderr, "\n[SONO] *** CAUGHT SIGNAL %d ***\n", sig);
+    sono_print_backtrace();
+    fprintf(stderr, "[SONO] *** END BACKTRACE ***\n");
+    _exit(128 + sig);
+}
+
+static void sono_terminate_handler() {
+    fprintf(stderr, "\n[SONO] *** std::terminate() CALLED ***\n");
+    auto eptr = std::current_exception();
+    if (eptr) {
+        try { std::rethrow_exception(eptr); }
+        catch (const std::exception& e) {
+            fprintf(stderr, "[SONO] exception: %s\n", e.what());
+        }
+        catch (...) {
+            fprintf(stderr, "[SONO] unknown exception\n");
+        }
+    }
+    sono_print_backtrace();
+    fprintf(stderr, "[SONO] *** END BACKTRACE ***\n");
+    _exit(134);
+}
+
+static void sono_atexit_handler() {
+    fprintf(stderr, "[SONO] *** atexit() handler called - normal exit ***\n");
+    sono_print_backtrace();
+}
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
@@ -430,6 +477,15 @@ public:
     //==============================================================================
     void initialise (const String&) override
     {
+        signal(SIGPIPE, SIG_IGN);  // critical: ignore SIGPIPE so broken sockets return EPIPE instead of killing us
+        signal(SIGABRT, sono_crash_handler);
+        signal(SIGSEGV, sono_crash_handler);
+        signal(SIGBUS, sono_crash_handler);
+        signal(SIGFPE, sono_crash_handler);
+        signal(SIGILL, sono_crash_handler);
+        signal(SIGTRAP, sono_crash_handler);
+        std::set_terminate(sono_terminate_handler);
+        atexit(sono_atexit_handler);
 
         handleCommandLine();
 
@@ -672,7 +728,7 @@ public:
 
     void shutdown() override
     {
-        //DBG("shutdown");
+        fprintf(stderr, "[SONO] === APP SHUTDOWN CALLED ===\n");
         if (mainWindow.get() != nullptr) {
             mainWindow->pluginHolder->savePluginState();
             mainWindow->pluginHolder->saveAudioDeviceState();
@@ -803,7 +859,7 @@ public:
     //==============================================================================
     void systemRequestedQuit() override
     {
-        DBG("Requested quit");
+        fprintf(stderr, "[SONO] === SYSTEM REQUESTED QUIT ===\n");
         if (mainWindow.get() != nullptr) {
             mainWindow->pluginHolder->savePluginState();
             mainWindow->pluginHolder->saveAudioDeviceState();
