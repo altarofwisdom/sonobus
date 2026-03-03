@@ -477,13 +477,15 @@ public:
     //==============================================================================
     void initialise (const String&) override
     {
+#ifndef _WIN32
         signal(SIGPIPE, SIG_IGN);  // critical: ignore SIGPIPE so broken sockets return EPIPE instead of killing us
+        signal(SIGBUS, sono_crash_handler);
+        signal(SIGTRAP, sono_crash_handler);
+#endif
         signal(SIGABRT, sono_crash_handler);
         signal(SIGSEGV, sono_crash_handler);
-        signal(SIGBUS, sono_crash_handler);
         signal(SIGFPE, sono_crash_handler);
         signal(SIGILL, sono_crash_handler);
-        signal(SIGTRAP, sono_crash_handler);
         std::set_terminate(sono_terminate_handler);
         atexit(sono_atexit_handler);
 
