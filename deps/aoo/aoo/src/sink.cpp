@@ -2037,6 +2037,7 @@ bool source_desc::try_decode_block(const Sink& s, stream_stats& stats){
     auto nsamples = format_->blockSize * format_->numChannels;
 
     // first handle buffering.
+do_buffering:
     if (stream_state_ == stream_state::buffering) {
         // if stopped during buffering, just fake a buffer underrun.
         if (stopped_) {
@@ -2112,6 +2113,14 @@ bool source_desc::try_decode_block(const Sink& s, stream_stats& stats){
     #endif
         // buffer empty -> underrun
         return false;
+    }
+
+    if (stream_state_ == stream_state::inactive) {
+        stream_state_ = stream_state::buffering;
+        LOG_DEBUG("AooSink: stream inactive -> buffering (re-buffer after underrun)");
+        auto e = make_event<stream_state_event>(ep, kAooStreamStateBuffering, 0);
+        eventbuffer_.push_back(std::move(e));
+        goto do_buffering;
     }
 
     if (stream_state_ != stream_state::active) {

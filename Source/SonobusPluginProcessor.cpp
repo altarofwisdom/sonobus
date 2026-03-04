@@ -424,6 +424,9 @@ struct SonobusAudioProcessor::RemotePeer {
 
     std::unique_ptr<AudioFormatWriter::ThreadedWriter> fileWriter;
 
+    double recvInactiveStartTimeMs = 0;
+    double lastRecvReinviteTimeMs = 0;
+    int recvReinviteAttempts = 0;
 
     ReadWriteLock    sinkLock;
 };
@@ -2586,8 +2589,8 @@ void SonobusAudioProcessor::updateSafetyMuting(RemotePeer * peer)
         && ((droprate > 0.0f && droprate < safetyunmutethreshrate)
             || (droprate == 0.0f && deltadroptime > safetyunmutethreshtime)
             || (peer->buffertimeMs > jitterbufthresh))) {
-        DBG("Droprate: " << droprate << "  deltatime: " << deltadroptime << " buftimems: " << peer->buffertimeMs);
-        DBG("Unmuting after reset drop");
+        //DBG("Droprate: " << droprate << "  deltatime: " << deltadroptime << " buftimems: " << peer->buffertimeMs);
+        //DBG("Unmuting after reset drop");
         peer->resetSafetyMuted = false;
     }
 
@@ -2841,7 +2844,7 @@ bool SonobusAudioProcessor::handleOtherMessage(EndpointState * endpoint, const A
                 endpoint_send(endpoint, (AooByte*)outmsg.Data(), (int) outmsg.Size());
             }
 
-            DBG("Received ping from " << endpoint->ipaddr << ":" << endpoint->port << "  stamp: " << tt);
+            //DBG("Received ping from " << endpoint->ipaddr << ":" << endpoint->port << "  stamp: " << tt);
 
         }
         else if (type == SONOBUS_MSGTYPE_PINGACK) {
@@ -3136,7 +3139,7 @@ void SonobusAudioProcessor::handleLatInfo(const juce::var & infolist)
             mLatInfoList.add(latinfo);
         }
 
-        DBG("latinfo: srcname: " << latinfo.sourceName << "  dest: " << latinfo.destName << "  latms: " << latinfo.latencyMs);
+        //DBG("latinfo: srcname: " << latinfo.sourceName << "  dest: " << latinfo.destName << "  latms: " << latinfo.latencyMs);
     }
 }
 
@@ -3307,42 +3310,33 @@ void SonobusAudioProcessor::handleRemotePeerInfoUpdate(RemotePeer * peer, const 
 
     // infodata should contain useful info
 
-    DBG("peerinfo: Handle remote peerinfo update ");
-
     if (infodata.hasProperty("jitbuf")) {
         float jitbufms = infodata.getProperty("jitbuf", 0.0f);
-        DBG("peerinfo: Got remote jitter buffer: " << jitbufms);
         peer->remoteJitterBufMs = jitbufms;
     }
     if (infodata.hasProperty("inlat")) {
         float latms = infodata.getProperty("inlat", 0.0f);
-        DBG("peerinfo: Got remote input latency: " << latms);
         peer->remoteInLatMs = latms;
     }
     if (infodata.hasProperty("outlat")) {
         float latms = infodata.getProperty("outlat", 0.0f);
-        DBG("peerinfo: Got remote input latency: " << latms);
         peer->remoteOutLatMs = latms;
     }
     if (infodata.hasProperty("nettype")) {
         int nettype = infodata.getProperty("nettype", (int) RemoteNetTypeUnknown);
-        DBG("peerinfo: Got remote net type: " << nettype);
         peer->remoteNetType = nettype;
     }
     if (infodata.hasProperty("rec")) {
         bool isrec = infodata.getProperty("rec", false);
-        DBG("peerinfo: Got remote recording: " << (int)isrec);
         peer->remoteIsRecording = isrec;
     }
     if (infodata.hasProperty("sendmute")) {
         bool muted = infodata.getProperty("sendmute", false);
-        DBG("peerinfo: Got remote main send mute: " << (int)muted);
         peer->remoteMainSendMuted = muted;
         peer->remoteMainSendMutedKnown = true;
     }
     if (infodata.hasProperty("recvmute")) {
         bool muted = infodata.getProperty("recvmute", false);
-        DBG("peerinfo: Got remote main recv mute: " << (int)muted);
         peer->remoteMainRecvMuted = muted;
         peer->remoteMainRecvMutedKnown = true;
     }
@@ -3395,7 +3389,7 @@ void SonobusAudioProcessor::sendRemotePeerInfoUpdate(int index, RemotePeer * top
             continue;
         }
 
-        DBG("Sending peerinfo message to peer id " << peer->userId);
+        //DBG("Sending peerinfo message to peer id " << peer->userId);
         this->sendPeerMessage(peer, (AooByte*)msg.Data(), (int32_t) msg.Size());
 
         if (index == i || topeer == peer) break;
@@ -3442,6 +3436,44 @@ void SonobusAudioProcessor::doSendData()
             if (!remote->haveSentFirstPeerInfo) {
                 sendRemotePeerInfoUpdate(-1, remote);
                 remote->haveSentFirstPeerInfo = true;
+            }
+        }
+
+        if (remote->recvAllow && remote->connected && !remote->recvActive
+            && !(remote->remoteMainSendMutedKnown && remote->remoteMainSendMuted)) {
+            if (remote->recvInactiveStartTimeMs <= 0) {
+                remote->recvInactiveStartTimeMs = nowtimems;
+            }
+            double inactiveDurationMs = nowtimems - remote->recvInactiveStartTimeMs;
+            constexpr double REINVITE_INITIAL_DELAY_MS = 8000.0;
+            constexpr double REINVITE_INTERVAL_MS = 10000.0;
+            constexpr int MAX_REINVITE_ATTEMPTS = 12;
+
+            if (inactiveDurationMs > REINVITE_INITIAL_DELAY_MS
+                && remote->recvReinviteAttempts < MAX_REINVITE_ATTEMPTS
+                && (nowtimems - remote->lastRecvReinviteTimeMs) > REINVITE_INTERVAL_MS) {
+
+                if (remote->remoteSourceId != kAooIdInvalid && remote->endpoint) {
+                    AooEndpoint aep = { remote->endpoint->address.address_ptr(),
+                                        (AooAddrSize)remote->endpoint->address.length(),
+                                        remote->remoteSourceId };
+                    remote->oursink->inviteSource(aep, nullptr);
+                    remote->recvReinviteAttempts++;
+                    remote->lastRecvReinviteTimeMs = nowtimems;
+                    DBG("Stream recovery: re-inviting source for peer " << remote->userName
+                        << " (attempt " << remote->recvReinviteAttempts
+                        << ", inactive " << (int)(inactiveDurationMs / 1000.0) << "s)");
+                }
+            }
+        } else {
+            if (remote->recvActive && remote->recvInactiveStartTimeMs > 0) {
+                if (remote->recvReinviteAttempts > 0) {
+                    DBG("Stream recovery: peer " << remote->userName << " recovered after "
+                        << remote->recvReinviteAttempts << " re-invite attempts");
+                }
+                remote->recvInactiveStartTimeMs = 0;
+                remote->lastRecvReinviteTimeMs = 0;
+                remote->recvReinviteAttempts = 0;
             }
         }
     }
@@ -3789,7 +3821,7 @@ int32_t SonobusAudioProcessor::handleAooClientEvent(const AooEvent *event, int32
         case kAooEventPeerPing:
         {
             auto e = (const AooEventPeerPing *)event;
-            DBG("Peer ping " <<  e->group << " - user " << e->user);
+            //DBG("Peer ping " <<  e->group << " - user " << e->user);
             break;
         }
             
@@ -4054,7 +4086,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             
             EndpointState * es = (EndpointState *) findOrAddRawEndpoint(e->endpoint.address, e->endpoint.addrlen);
             
-            DBG("Got source underrun event from " << es->ipaddr << ":" << es->port << "   " << e->endpoint.id);
+            //DBG("Got source underrun event from " << es->ipaddr << ":" << es->port << "   " << e->endpoint.id);
             
             const ScopedReadLock sl (mCoreLock);
             RemotePeer * peer = findRemotePeer(es, sinkId);
@@ -4083,7 +4115,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                                 peer->fillRatioSlow.reset();
                                 peer->fillRatio.reset();
                                 
-                                DBG("AUTO-Increasing buffer time by " << adjms << " ms to " << (int)peer->buffertimeMs << " droprate: " << droprate);
+                                //DBG("AUTO-Increasing buffer time by " << adjms << " ms to " << (int)peer->buffertimeMs << " droprate: " << droprate);
                                 
                                 if (peer->hasRealLatency) {
                                     peer->totalEstLatency = peer->totalLatency + (peer->buffertimeMs - peer->bufferTimeAtRealLatency);
@@ -4094,7 +4126,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                                     const float timesincedecrthresh = 2.0;
                                     if (peer->lastNetBufDecrTime > 0 && (nowtime - peer->lastNetBufDecrTime)*1e-3 < timesincedecrthresh ) {
                                         peer->netBufAutoBaseline = peer->buffertimeMs;
-                                        DBG("Got drop within short time thresh, setting minimum baseline for future decr to " << peer->netBufAutoBaseline);
+                                        //DBG("Got drop within short time thresh, setting minimum baseline for future decr to " << peer->netBufAutoBaseline);
                                     }
                                 }
                                 
@@ -4134,7 +4166,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             
             EndpointState * es = (EndpointState *) findOrAddRawEndpoint(e->endpoint.address, e->endpoint.addrlen);
             
-            DBG("Got source block dropped event from " << es->ipaddr << ":" << es->port << "  " << e->endpoint.id << " -- " << e->count);
+            //DBG("Got source block dropped event from " << es->ipaddr << ":" << es->port << "  " << e->endpoint.id << " -- " << e->count);
             
             break;
         }
@@ -4143,7 +4175,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             auto *e = (AooEventBlockResend *)event;
             EndpointState * es = (EndpointState *) findOrAddRawEndpoint(e->endpoint.address, e->endpoint.addrlen);
             
-            DBG("Got source block resent event from " << es->ipaddr << ":" << es->port << "  " << e->endpoint.id << " -- " << e->count);
+            //DBG("Got source block resent event from " << es->ipaddr << ":" << es->port << "  " << e->endpoint.id << " -- " << e->count);
             const ScopedReadLock sl (mCoreLock);
             RemotePeer * peer = findRemotePeer(es, sinkId);
             if (peer) {
@@ -4159,7 +4191,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             
             
             double diff = aoo::time_tag::duration(e->t1, e->t2) * 1000.0;
-            DBG("Got source block ping event from " << es->ipaddr << ":" << es->port << "  " << e->endpoint.id << " -- " << diff);
+            //DBG("Got source block ping event from " << es->ipaddr << ":" << es->port << "  " << e->endpoint.id << " -- " << diff);
             
             
             RemotePeer * peer = findRemotePeer(es, sinkId);
@@ -4177,7 +4209,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                         if (deltadroptime > nodropsthresh) {
                             peer->autoNetbufInitCompleted = true;
                             peer->resetSafetyMuted = false;
-                            DBG("Netbuf Initial auto time is done after no drops in " << nodropsthresh);
+                            //DBG("Netbuf Initial auto time is done after no drops in " << nodropsthresh);
                             
                             // clear drop count
                             peer->dataPacketsResent = 0;
@@ -4226,7 +4258,7 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
                                     peer->totalEstLatency = peer->totalLatency + (peer->buffertimeMs - peer->bufferTimeAtRealLatency);
                                 }
                                 
-                                DBG("AUTO-Decreasing buffer time by " << adjms << " ms to " << (int) peer->buffertimeMs);
+                                //DBG("AUTO-Decreasing buffer time by " << adjms << " ms to " << (int) peer->buffertimeMs);
                                 
                                 peer->lastNetBufDecrTime = nowtime;
                                 
@@ -4249,6 +4281,20 @@ int32_t SonobusAudioProcessor::handleAooSinkEvent(const AooEvent *event, int32_t
             }
             
             
+            break;
+        }
+        case kAooEventSourceRemove:
+        {
+            auto e = (AooEventEndpoint *)event;
+            EndpointState * es = (EndpointState *) findOrAddRawEndpoint(e->endpoint.address, e->endpoint.addrlen);
+            const ScopedReadLock sl (mCoreLock);
+            RemotePeer * peer = findRemotePeer(es, sinkId);
+            if (peer) {
+                DBG("Source removed (timeout) for peer " << peer->userName
+                    << " from " << es->ipaddr << ":" << es->port << " id=" << e->endpoint.id);
+                peer->recvActive = false;
+                peer->recvInactiveStartTimeMs = Time::getMillisecondCounterHiRes();
+            }
             break;
         }
         default:
@@ -4281,7 +4327,7 @@ int32_t SonobusAudioProcessor::handleAooSourceEvent(const AooEvent *event, int32
                     peer->smoothPingTime.push(peer->pingTime);
                 }
 
-                DBG("ping to source " << sourceId << " recvd from " <<  es->ipaddr << ":" << es->port << " -- " << diff1 << " " << diff2 << " " <<  rtt << " smooth: " << peer->smoothPingTime.xbar << " stdev: " <<peer->smoothPingTime.s2xx);
+                //DBG("ping to source " << sourceId << " recvd from " <<  es->ipaddr << ":" << es->port << " -- " << diff1 << " " << diff2 << " " <<  rtt << " smooth: " << peer->smoothPingTime.xbar << " stdev: " <<peer->smoothPingTime.s2xx);
 
 
                 if (!peer->hasRealLatency) {
@@ -4474,7 +4520,7 @@ void SonobusAudioProcessor::handleEvents()
     int32_t dummy = 0;
 
     static int counter = 0;
-    if (++counter > 100) { // ~2 seconds
+    if (++counter > 1500) { // ~30 seconds
         counter = 0;
         for (int i=0; i < mRemotePeers.size(); ++i) {
              auto* peer = mRemotePeers.getUnchecked(i);
@@ -4554,7 +4600,7 @@ void SonobusAudioProcessor::sendPingEvent(RemotePeer * peer)
 
     sendPeerMessage(peer, (AooByte*)outmsg.Data(), (int32_t) outmsg.Size());
 
-    DBG("Sent ping to peer: " << peer->endpoint->ipaddr);
+    //DBG("Sent ping to peer: " << peer->endpoint->ipaddr);
 }
 
 
@@ -4576,7 +4622,7 @@ void SonobusAudioProcessor::handlePingEvent(EndpointState * endpoint, uint64_t t
         peer->smoothPingTime.push(peer->pingTime);
     }
 
-    DBG("ping recvd from " << peer->endpoint->ipaddr << ":" << peer->endpoint->port << " -- " << diff1 << " " << diff2 << " " <<  rtt << " smooth: " << peer->smoothPingTime.xbar << " stdev: " <<peer->smoothPingTime.s2xx);
+    //DBG("ping recvd from " << peer->endpoint->ipaddr << ":" << peer->endpoint->port << " -- " << diff1 << " " << diff2 << " " <<  rtt << " smooth: " << peer->smoothPingTime.xbar << " stdev: " <<peer->smoothPingTime.s2xx);
 
 
     if (!peer->hasRealLatency) {
