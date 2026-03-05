@@ -4524,7 +4524,11 @@ void SonobusAudioProcessor::handleEvents()
         counter = 0;
         for (int i=0; i < mRemotePeers.size(); ++i) {
              auto* peer = mRemotePeers.getUnchecked(i);
-             DBG("Peer " << i << " (" << peer->userName << ") recvChannels: " << peer->recvChannels << " active: " << peer->recvActive << " connected: " << peer->connected);
+             DBG("Peer " << i << " (" << peer->userName << ") recvCh:" << peer->recvChannels
+                 << " active:" << peer->recvActive << " conn:" << peer->connected
+                 << " recvAllow:" << peer->recvAllow << " sendActive:" << peer->sendActive
+                 << " reinvAttempts:" << peer->recvReinviteAttempts
+                 << " inactiveSince:" << (peer->recvInactiveStartTimeMs > 0 ? (int)((Time::getMillisecondCounterHiRes() - peer->recvInactiveStartTimeMs) / 1000.0) : 0) << "s");
         }
     }
 

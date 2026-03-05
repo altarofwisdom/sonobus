@@ -982,6 +982,7 @@ AooError Sink::handle_data_packet(net_packet& d, bool binary,
     source_lock lock2(sources_);
     auto src = find_source(addr, id);
     if (!src){
+        fprintf(stderr, "[AOO:DIAG] handle_data_packet: re-adding source id=%d (was removed by timeout)\n", id);
         src = add_source(addr, id);
     }
     return src->handle_data(*this, d, binary);
@@ -1062,10 +1063,12 @@ source_desc::~source_desc() {
 
 bool source_desc::check_active(const Sink& s) {
     auto elapsed = s.elapsed_time();
-    // check source idle timeout
-    auto delta = elapsed - last_packet_time_.load(std::memory_order_relaxed);
+    auto lpt = last_packet_time_.load(std::memory_order_relaxed);
+    auto delta = elapsed - lpt;
     if (delta > s.source_timeout()){
-        return false; // source timeout
+        fprintf(stderr, "[AOO:DIAG] check_active TIMEOUT: elapsed=%.3f last_pkt=%.3f delta=%.3f timeout=%.1f state=%d stream_state=%d\n",
+                elapsed, lpt, delta, s.source_timeout(), (int)state_.load(), (int)stream_state_);
+        return false;
     }
     return true;
 }
@@ -1302,6 +1305,8 @@ AooError source_desc::handle_start(const Sink& s, int32_t stream, int32_t format
     // NOTE: the stream ID must always be in sync with the format,
     // so we have to set it while holding the lock!
     bool first_stream = stream_id_ == kAooIdInvalid;
+    fprintf(stderr, "[AOO:DIAG] handle_start: stream=%d first=%d old_stream=%d state=%d\n",
+            stream, first_stream, stream_id_, (int)state_.load());
     stream_id_ = stream;
 
     // TODO handle 'flags' (future)
@@ -1435,24 +1440,25 @@ AooError source_desc::handle_data(const Sink& s, net_packet& d, bool binary)
             // LOG_DEBUG("AooSink: handle_data: ignore (invite timeout)");
             return kAooOk;
         }
+        fprintf(stderr, "[AOO:DIAG] handle_data: timeout state, new stream_id=%d (old=%d) -> requesting /start\n",
+                d.stream_id, stream_id_);
     } else if (state == source_state::idle) {
         if (d.stream_id == stream_id_) {
-            // this can happen when /data messages are reordered after
-            // a /stop message.
             LOG_DEBUG("AooSink: received data message for idle stream!");
         #if 1
-            // NOTE: during the 'idle' state no packets are being processed,
-            // so incoming data messages would pile up indefinitely.
             return kAooOk;
         #endif
         }
+        fprintf(stderr, "[AOO:DIAG] handle_data: idle state, stream_id=%d (stored=%d) -> requesting /start\n",
+                d.stream_id, stream_id_);
     }
 
     // the source format might have changed and we haven't noticed,
     // e.g. because of dropped UDP packets.
     // NOTE: stream_id_ can only change in this thread!
     if (d.stream_id != stream_id_){
-        LOG_DEBUG("AooSink: received data message before /start message");
+        fprintf(stderr, "[AOO:DIAG] handle_data: stream_id mismatch (pkt=%d stored=%d state=%d) -> requesting /start\n",
+                d.stream_id, stream_id_, (int)state);
         push_request(request(request_type::start));
         return kAooOk;
     }
@@ -1646,6 +1652,8 @@ bool source_desc::process(const Sink& s, AooSample **buffer, int32_t nsamples,
         } else {
             // invite, timeout or idle
             if (stream_state_ != stream_state::inactive) {
+                fprintf(stderr, "[AOO:DIAG] process: state=%d (not run) -> stream INACTIVE (was %d)\n",
+                        (int)state, (int)stream_state_);
                 // deactivate stream immediately
                 stream_state_ = stream_state::inactive;
 
@@ -1726,6 +1734,8 @@ bool source_desc::process(const Sink& s, AooSample **buffer, int32_t nsamples,
             // buffer ran out -> "inactive"
             if (stream_state_ != stream_state::inactive) {
                 stream_state_ = stream_state::inactive;
+                fprintf(stderr, "[AOO:DIAG] stream -> INACTIVE (jitter buf empty, resampler empty) state=%d elapsed=%.3f last_pkt=%.3f\n",
+                        (int)state_.load(), s.elapsed_time(), last_packet_time_.load());
                 LOG_DEBUG("AooSink: stream inactive");
                 // TODO: read out partial data from resampler and send sample offset
                 auto e = make_event<stream_state_event>(ep, kAooStreamStateInactive, 0);
