@@ -11,6 +11,9 @@
 #ifdef _WIN32
 #include <ws2tcpip.h>
 #include <mstcpip.h>
+#ifndef SIO_UDP_CONNRESET
+#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR, 12)
+#endif
 #else
 #include <sys/select.h>
 #include <sys/poll.h>
