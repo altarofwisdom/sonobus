@@ -660,6 +660,14 @@ int socket_udp(const ip_address& bindaddr)
                 fflush(stderr);
             }
         }
+#ifdef _WIN32
+        {
+            BOOL bNewBehavior = FALSE;
+            DWORD dwBytesReturned = 0;
+            WSAIoctl(sock, SIO_UDP_CONNRESET, &bNewBehavior, sizeof(bNewBehavior),
+                     NULL, 0, &dwBytesReturned, NULL, NULL);
+        }
+#endif
 #ifdef __APPLE__
         // Prevent EPIPE/SIGPIPE on send errors
         socket_set_int_option(sock, SOL_SOCKET, SO_NOSIGPIPE, true);
@@ -856,10 +864,22 @@ int socket_receive(int socket, void *buf, int size,
     }
     if (addr) {
         addr->resize(ip_address::max_length);
-        return recvfrom(socket, (char *)buf, size, 0,
-                        addr->address_ptr(), addr->length_ptr());
+        auto result = recvfrom(socket, (char *)buf, size, 0,
+                               addr->address_ptr(), addr->length_ptr());
+#ifdef _WIN32
+        if (result < 0 && WSAGetLastError() == WSAECONNRESET) {
+            return 0;
+        }
+#endif
+        return result;
     } else {
-        return recv(socket, (char *)buf, size, 0);
+        auto result = recv(socket, (char *)buf, size, 0);
+#ifdef _WIN32
+        if (result < 0 && WSAGetLastError() == WSAECONNRESET) {
+            return 0;
+        }
+#endif
+        return result;
     }
 }
 

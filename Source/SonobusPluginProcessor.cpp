@@ -2613,7 +2613,10 @@ void SonobusAudioProcessor::doReceiveData()
 
     if (nbytes == 0) return; // timeout
     else if (nbytes < 0) {
-        DBG("Error receiving UDP");
+        static int udpErrCount = 0;
+        if (++udpErrCount <= 3) {
+            DBG("Error receiving UDP (count=" << udpErrCount << ")");
+        }
         return;
     }
 
