@@ -69,7 +69,12 @@ inline void osc_stream_receiver::handle_message(const char *data, int32_t n, Fn&
                 // message complete!
                 assert(buffer_.size() == message_size_ + sizeof(message_size_));
                 osc::ReceivedPacket packet(buffer_.data() + sizeof(message_size_), message_size_);
-                handler(packet);
+                try {
+                    handler(packet);
+                } catch (...) {
+                    reset();
+                    throw;
+                }
                 reset();
             }
         }

@@ -241,11 +241,17 @@ void client_endpoint::on_close(Server& server) {
 }
 
 void client_endpoint::handle_message(Server &server, const AooByte *data, int32_t n) {
-    receiver_.handle_message((const char *)data, n,
-            [&](const osc::ReceivedPacket& packet) {
-        osc::ReceivedMessage msg(packet);
-        server.handle_message(*this, msg, packet.Size());
-    });
+    try {
+        receiver_.handle_message((const char *)data, n,
+                [&](const osc::ReceivedPacket& packet) {
+            osc::ReceivedMessage msg(packet);
+            server.handle_message(*this, msg, packet.Size());
+        });
+    } catch (const error& e) {
+        LOG_ERROR("AooServer: client " << id_ << " message error: " << e.what());
+    } catch (const osc::Exception& e) {
+        LOG_ERROR("AooServer: client " << id_ << " OSC error: " << e.what());
+    }
 }
 
 void client_endpoint::on_group_join(Server&, const group& grp, const user& usr) {

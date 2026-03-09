@@ -11,6 +11,8 @@
 #include <thread>
 #include <list>
 #include <vector>
+#include <unordered_map>
+#include <mutex>
 
 #ifdef _WIN32
 # include <windows.h>
@@ -60,6 +62,10 @@ void stop_server(int error) {
 // Support multiple server instances for Split Dual Stack
 std::list<aoo::udp_server> g_udp_servers;
 std::list<aoo::tcp_server> g_tcp_servers;
+
+std::mutex g_client_errors_mutex;
+std::unordered_map<AooId, int> g_client_error_counts;
+static constexpr int kMaxClientErrors = 10;
 
 void handle_udp_receive(aoo::udp_server* server, int e, const aoo::ip_address& addr,
                         const AooByte *data, AooSize size) {
@@ -128,19 +134,37 @@ AooId handle_tcp_accept(aoo::tcp_server* server, int e, const aoo::ip_address& a
     }
 }
 
+void remove_client(aoo::tcp_server* server, AooId client) {
+    g_aoo_server->removeClient(client);
+    server->close(client);
+    std::lock_guard<std::mutex> lock(g_client_errors_mutex);
+    g_client_error_counts.erase(client);
+}
+
 void handle_tcp_receive(aoo::tcp_server* server, int e, AooId client, const aoo::ip_address& addr,
                         const AooByte *data, AooSize size) {
     if (e == 0 && size > 0) {
-        // handle client message
-        if (auto err = g_aoo_server->handleClientMessage(client, data, size); err != kAooOk) {
-            // remove misbehaving client
-            g_aoo_server->removeClient(client);
-            server->close(client);
+        auto err = g_aoo_server->handleClientMessage(client, data, size);
+        if (err == kAooOk) {
+            std::lock_guard<std::mutex> lock(g_client_errors_mutex);
+            g_client_error_counts.erase(client);
+        } else {
+            int errorCount;
+            {
+                std::lock_guard<std::mutex> lock(g_client_errors_mutex);
+                errorCount = ++g_client_error_counts[client];
+            }
             if (g_loglevel >= kAooLogLevelWarning)
-                std::cout << "Close client " << client << " after error: " << aoo_strerror(err) << std::endl;
+                std::cout << "Client " << client << " message error (" << errorCount
+                          << "/" << kMaxClientErrors << "): " << aoo_strerror(err) << std::endl;
+            if (errorCount >= kMaxClientErrors) {
+                if (g_loglevel >= kAooLogLevelWarning)
+                    std::cout << "Removing client " << client << " after " << kMaxClientErrors
+                              << " consecutive errors" << std::endl;
+                remove_client(server, client);
+            }
         }
     } else {
-        // close client
         if (e != 0) {
             if (g_loglevel >= kAooLogLevelWarning)
                 std::cout << "Close client after error: " << aoo::socket_strerror(e) << std::endl;
@@ -148,7 +172,7 @@ void handle_tcp_receive(aoo::tcp_server* server, int e, AooId client, const aoo:
             if (g_loglevel >= kAooLogLevelVerbose)
                 std::cout << "Client " << client << " has disconnected" << std::endl;
         }
-        g_aoo_server->removeClient(client);
+        remove_client(server, client);
     }
 }
 
@@ -478,6 +502,8 @@ int main(int argc, const char **argv) {
     for (auto& thread : threads) {
         if (thread.joinable()) thread.join();
     }
+
+    g_aoo_server = nullptr;
 
     aoo_terminate();
 
