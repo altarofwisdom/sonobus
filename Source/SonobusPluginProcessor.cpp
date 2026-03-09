@@ -2651,8 +2651,10 @@ void SonobusAudioProcessor::doReceiveData()
         if (handleOtherMessage(endpoint, buf, nbytes)) {
 
         }
+        else if (aooErr == kAooErrorNotFound) {
+            // stale relay message targeting a source/sink ID that no longer exists — harmless
+        }
         else {
-            // not a valid AoO OSC message
             DBG("SonoBus: not a valid AOO message! (AooErr: " << aooErr << ") from " << addr.name_unmapped() << ":" << addr.port() << " size: " << nbytes << " hex: " << String::toHexString(buf, std::min(nbytes, 16)));
         }
     }
